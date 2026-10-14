@@ -587,8 +587,8 @@ const PERM_LABELS = {
 };
 // Responsable Achats et Moyens Généraux : dernière validation du circuit.
 const RAF_ID = 'carine.toro';
-const TRANCHES = ['< 50 000', '50 000 à 100 000', '100 000 à 1 500 000', '> 1 500 000'];
-const trancheFor = m => m < 50000 ? 0 : m <= 100000 ? 1 : m <= 1500000 ? 2 : 3;
+// Cases « Montant Achat » du formulaire papier, dans l'ordre et avec les libellés d'origine.
+const TRANCHES = ['< 50 000', '> 50 000', '> 100 000', '> 1 500 000', '< 1 500 000'];
 
 const STATUS = {
   brouillon: ['Brouillon', 'b-neutral'],
@@ -978,10 +978,9 @@ function rafSection(d) {
     </div>
     <div class="fiche-signs single"><div class="fiche-sign"><h3>Signature</h3>${signatureBlock(d.sigRaf, '')}</div></div>`;
   }
-  const t = trancheFor(d.montant);
   return `${head}<div class="fiche-grid" id="rafForm">${ident}
       <div class="fiche-cell full"><span>Montant achat *</span>
-        <div class="tranches">${TRANCHES.map((l, i) => `<label class="tranche"><input type="radio" name="tranche" value="${i}" ${i === t ? 'checked' : ''}>${l}</label>`).join('')}</div>
+        <div class="tranches">${TRANCHES.map((l, i) => `<label class="tranche"><input type="radio" name="tranche" value="${i}">${l}</label>`).join('')}</div>
         <div class="field-error" id="eTranche"></div></div>
       ${[0, 1, 2].map(i => `<div class="fiche-cell full"><div class="pf-row">
         <div><label for="pfF${i}">Proforma ${i + 1}${i === 0 ? ' *' : ''}</label><input class="input" id="pfF${i}" placeholder="Fournisseur"></div>

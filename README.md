@@ -8,7 +8,7 @@ Ouvrir `maquette/index.html` dans un navigateur, puis cliquer sur « Se connecte
 2. La fiche est transmise à son **N+1**, qui reçoit une notification.
 3. Le N+1 **valide en signant**, ou **rejette avec un commentaire** obligatoire (le demandeur peut alors **corriger et renvoyer**).
 4. Une fois validée, la fiche signée part en **lecture seule** chez le **RAF/HF** (Responsable Achats et Moyens Généraux).
-5. Le RAF/HF complète sa partie « Validation (1) de la demande par RAF/HF » : tranche du montant d'achat, proformas 1 à 3 (fournisseur, réf. N°, montant), réserve, date, puis **signe** ; ou **retourne la fiche au N+1** avec un commentaire si elle est mal remplie.
+5. Le RAF/HF complète sa partie « Validation (1) de la demande par RAF/HF » : case « Montant Achat » (< 50 000, > 50 000, > 100 000, > 1 500 000, < 1 500 000), proformas 1 à 3 (fournisseur, réf. N°, montant), réserve, date, puis **signe** ; ou **retourne la fiche au N+1** avec un commentaire si elle est mal remplie.
 6. Chaque décision est notifiée et tracée (historique de la demande et journal d'audit).
 
 Le sélecteur « Profil (démo) » en haut permet de passer de Fatou Diallo (demandeur), Serge Kouadio (N+1), Carine Toro (RAF/HF) ou Mireille Gbagbo (administratrice) pour tester le circuit.
