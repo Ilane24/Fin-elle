@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Fin'Elle – Maquette</title>
+<title>Maquette Fin'Elle</title>
 <style>
 /* =========================================================
    Charte – valeurs indicatives, à remplacer par la charte
@@ -170,7 +170,7 @@ svg.i { width: 18px; height: 18px; stroke: currentColor; fill: none; stroke-widt
 
 .main { min-width: 0; display: flex; flex-direction: column; }
 .topbar {
-  position: sticky; top: 0; z-index: 20; display: flex; align-items: center; gap: 12px;
+  position: sticky; top: env(safe-area-inset-top, 0px); z-index: 20; display: flex; align-items: center; gap: 12px;
   padding: 12px 28px; background: rgba(255, 255, 255, .9); backdrop-filter: blur(8px); border-bottom: 1px solid var(--border);
 }
 .topbar .search { position: relative; flex: 1; max-width: 420px; }
@@ -348,6 +348,106 @@ td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; }
   .toolbar .input { min-width: 0; flex: 1; }
   .hide-sm { display: none; }
 }
+
+/* ---------- Fiche d'engagement de dépenses ---------- */
+.fiche { background: var(--bg); border: 1px solid var(--border); border-radius: var(--radius); box-shadow: var(--shadow-sm); overflow: hidden; }
+.fiche-head { display: flex; align-items: center; gap: 16px; padding: 18px 24px 14px; border-bottom: 3px solid var(--accent); }
+.fiche-code { font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace; font-size: 12px; font-weight: 700; font-style: italic; color: var(--text-muted); }
+.fiche-title { flex: 1; text-align: center; font-size: 16px; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; }
+.fiche-section { text-align: center; font-weight: 700; font-size: 12.5px; letter-spacing: .08em; text-transform: uppercase; padding: 10px; background: var(--surface); border-bottom: 1px solid var(--border); }
+.fiche-grid { display: grid; grid-template-columns: 1fr 1fr; }
+.fiche-cell { padding: 12px 24px; border-bottom: 1px dashed var(--border); display: grid; gap: 4px; align-content: start; min-width: 0; transition: background var(--t) var(--ease); }
+.fiche-cell:nth-child(odd) { border-right: 1px dashed var(--border); }
+.fiche-cell.full { grid-column: 1 / -1; border-right: 0; }
+.fiche-cell:hover { background: #FCFCFD; }
+.fiche-cell > span { font-size: 12px; color: var(--text-muted); font-weight: 600; }
+.fiche-cell > b { font-weight: 600; overflow-wrap: anywhere; }
+.fiche-cell .input { padding: 8px 10px; }
+.fiche-cell .field-error { min-height: 0; }
+.fiche-signs { display: grid; grid-template-columns: 1fr 1fr; border-top: 2px solid var(--text); }
+.fiche-sign { padding: 14px 24px 18px; display: grid; gap: 8px; align-content: start; min-width: 0; }
+.fiche-sign + .fiche-sign { border-left: 2px solid var(--text); }
+.fiche-sign h3 { text-align: center; font-size: 13px; }
+.sign-box {
+  height: 120px; border-radius: var(--radius-sm); border: 1px dashed var(--border); background: var(--surface);
+  display: grid; place-items: center; text-align: center; color: var(--text-muted); font-size: 12.5px; padding: 8px;
+}
+.sign-box img { max-height: 90px; max-width: 100%; }
+.sign-meta { font-size: 12px; color: var(--text-muted); text-align: center; }
+.radio-row { display: flex; gap: 18px; align-items: center; padding-top: 2px; }
+.radio-row label { display: inline-flex; gap: 6px; align-items: center; cursor: pointer; font-weight: 500; }
+.radio-row input { accent-color: var(--accent); width: 16px; height: 16px; cursor: pointer; }
+
+/* Pad de signature */
+.pad-wrap { position: relative; }
+.pad { width: 100%; height: 140px; display: block; border-radius: var(--radius-sm); border: 1.5px dashed var(--border); background: var(--bg); cursor: crosshair; touch-action: none; transition: border-color var(--t) var(--ease), box-shadow var(--t) var(--ease); }
+.pad:hover { border-color: var(--accent); }
+.pad.signed { border-style: solid; border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); }
+.pad.invalid { border-color: var(--danger); }
+.pad-hint { position: absolute; inset: 0; display: grid; place-items: center; pointer-events: none; color: var(--text-muted); font-size: 12.5px; transition: opacity var(--t) var(--ease); }
+.pad.signed + .pad-hint { opacity: 0; }
+.pad-actions { display: flex; justify-content: space-between; align-items: center; font-size: 12px; }
+.link-btn { background: none; border: 0; padding: 0; font: inherit; color: var(--accent); cursor: pointer; font-weight: 600; }
+.link-btn:hover { text-decoration: underline; }
+
+/* Bandeaux */
+.alert { display: flex; gap: 12px; padding: 14px 16px; border-radius: var(--radius); border: 1px solid; align-items: flex-start; }
+.alert .i { margin-top: 2px; }
+.alert b { display: block; }
+.alert p { margin: 4px 0 0; }
+.alert-danger { background: var(--danger-soft); border-color: #F5C2C2; color: var(--danger); }
+.alert-danger p { color: var(--text); }
+.alert-warning { background: var(--warning-soft); border-color: #F3D9A8; color: var(--warning); }
+.alert-warning p { color: var(--text); }
+.alert-success { background: var(--success-soft); border-color: #BFE3CD; color: var(--success); }
+.alert-success p { color: var(--text); }
+.alert .btn { margin-top: 10px; }
+
+/* Fenêtre modale */
+.modal-bg { position: fixed; inset: 0; z-index: 60; background: rgba(16, 24, 40, .4); display: grid; place-items: center; padding: 16px; animation: fade .2s var(--ease) both; }
+.modal { width: 100%; max-width: 520px; background: var(--bg); border-radius: var(--radius-lg); box-shadow: var(--shadow-hover); padding: 24px; display: grid; gap: 16px; animation: rise .25s var(--ease) both; max-height: calc(100% - 32px); overflow: auto; }
+.modal-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.modal-actions { display: flex; justify-content: flex-end; gap: 10px; flex-wrap: wrap; }
+.btn-danger { background: var(--danger); color: #fff; }
+.btn-danger:hover { background: #B02525; transform: translateY(-1px); box-shadow: 0 6px 14px rgba(201, 42, 42, .25); }
+.btn-success { background: var(--success); color: #fff; }
+.btn-success:hover { background: #27865A; transform: translateY(-1px); box-shadow: 0 6px 14px rgba(47, 158, 98, .25); }
+
+/* Notifications */
+.notif-panel {
+  position: absolute; right: 16px; top: calc(100% + 6px); width: 360px; max-width: calc(100vw - 32px); z-index: 40;
+  background: var(--bg); border: 1px solid var(--border); border-radius: var(--radius); box-shadow: var(--shadow-hover); overflow: hidden; animation: rise .2s var(--ease) both;
+}
+.notif-panel h3 { padding: 14px 16px; border-bottom: 1px solid var(--border); }
+.notif-item { display: grid; gap: 2px; padding: 12px 16px; border-bottom: 1px solid var(--border); cursor: pointer; transition: background var(--t) var(--ease); position: relative; }
+.notif-item:last-child { border-bottom: 0; }
+.notif-item:hover { background: var(--surface); }
+.notif-item.unread { padding-left: 28px; }
+.notif-item.unread::before { content: ""; position: absolute; left: 12px; top: 18px; width: 8px; height: 8px; border-radius: 50%; background: var(--accent); }
+.notif-item small { color: var(--text-muted); }
+.notif-empty { padding: 20px 16px; color: var(--text-muted); text-align: center; }
+.notif .count-dot { position: absolute; top: 3px; right: 3px; min-width: 17px; height: 17px; padding: 0 4px; border-radius: 999px; background: var(--accent); color: #fff; font-size: 10.5px; font-weight: 700; display: grid; place-items: center; border: 2px solid var(--bg); }
+
+.profile-switch { display: flex; align-items: center; gap: 8px; font-size: 12.5px; color: var(--text-muted); }
+.profile-switch .input { width: auto; padding: 6px 10px; font-size: 13px; }
+.demo-accounts { display: grid; gap: 6px; }
+.demo-acc {
+  display: flex; align-items: center; gap: 10px; padding: 8px 10px; border: 1px solid var(--border); border-radius: var(--radius-sm); background: var(--bg); cursor: pointer; font: inherit; text-align: left; color: var(--text);
+  transition: border-color var(--t) var(--ease), background var(--t) var(--ease), transform var(--t-fast) var(--ease);
+}
+.demo-acc:hover { border-color: var(--accent); background: var(--accent-soft); transform: translateX(2px); }
+.demo-acc.on { border-color: var(--accent); background: var(--accent-soft); }
+.demo-acc .avatar { width: 28px; height: 28px; font-size: 11px; }
+.demo-acc span { font-size: 12px; color: var(--text-muted); display: block; }
+
+@media (max-width: 900px) {
+  .fiche-grid, .fiche-signs { grid-template-columns: 1fr; }
+  .fiche-cell:nth-child(odd) { border-right: 0; }
+  .fiche-sign + .fiche-sign { border-left: 0; border-top: 2px solid var(--text); }
+  .fiche-head { padding: 14px 16px 12px; flex-wrap: wrap; }
+  .fiche-cell, .fiche-sign { padding-left: 16px; padding-right: 16px; }
+  .profile-switch > span { display: none; }
+}
 </style>
 </head>
 <body>
@@ -359,7 +459,7 @@ td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; }
   <div class="login-card">
     <div class="logo"><div class="logo-mark">F</div><div>Fin'Elle<small>par Cofina</small></div></div>
     <h1 style="margin-top:24px">Connexion</h1>
-    <p class="muted" style="margin:4px 0 0">Accès réservé aux collaborateurs. Démo : les champs sont pré-remplis, cliquez sur « Se connecter ».</p>
+    <p class="muted" style="margin:4px 0 0">Accès réservé aux collaborateurs.</p>
     <form id="loginForm" novalidate>
       <div class="field">
         <label for="email">E-mail professionnel</label>
@@ -370,8 +470,8 @@ td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; }
         <input class="input" id="pwd" type="password" autocomplete="current-password" placeholder="••••••••" value="demo2026">
       </div>
       <div class="field">
-        <label for="role">Rôle (démo)</label>
-        <select class="input" id="role"></select>
+        <label>Comptes de démonstration</label>
+        <div class="demo-accounts" id="demoAccounts"></div>
       </div>
       <div class="field-error" id="loginError" role="alert"></div>
       <button class="btn btn-primary" type="submit" style="justify-content:center">Se connecter <svg class="i i-arrow"><use href="#ic-arrow"/></svg></button>
@@ -403,16 +503,18 @@ td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; }
       <button class="icon-btn menu-toggle" id="menuToggle" aria-label="Ouvrir le menu"><svg class="i"><use href="#ic-menu"/></svg></button>
       <div class="search">
         <svg class="i"><use href="#ic-search"/></svg>
-        <input class="input" placeholder="Rechercher un dossier, une cliente…" aria-label="Rechercher">
+        <input class="input" id="search" placeholder="Rechercher une demande, un objet…" aria-label="Rechercher">
       </div>
       <div class="spacer"></div>
-      <span class="muted hide-sm" id="today"></span>
-      <button class="icon-btn notif" aria-label="Notifications"><svg class="i"><use href="#ic-bell"/></svg><span class="dot"></span></button>
+      <label class="profile-switch"><span>Profil (démo)</span><select class="input" id="profileSwitch" aria-label="Changer de profil"></select></label>
+      <button class="icon-btn notif" id="notifBtn" aria-label="Notifications"><svg class="i"><use href="#ic-bell"/></svg><span class="count-dot hidden" id="notifCount"></span></button>
+      <div class="notif-panel hidden" id="notifPanel"></div>
     </header>
     <main class="content" id="view"></main>
   </div>
 </div>
 
+<div id="modalRoot"></div>
 <div class="toast" id="toast"><svg class="i"><use href="#ic-check"/></svg><span></span></div>
 
 <!-- ================= Icônes ================= -->
@@ -434,11 +536,13 @@ td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; }
   <symbol id="ic-lock" viewBox="0 0 24 24"><rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></symbol>
   <symbol id="ic-wallet" viewBox="0 0 24 24"><path d="M3 7a2 2 0 0 1 2-2h14v4M3 7v10a2 2 0 0 0 2 2h16V9H5a2 2 0 0 1-2-2z"/><circle cx="16.5" cy="14" r="1.2"/></symbol>
   <symbol id="ic-clock" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></symbol>
-  <symbol id="ic-trend" viewBox="0 0 24 24"><path d="m3 17 6-6 4 4 8-8M15 7h6v6"/></symbol>
   <symbol id="ic-file" viewBox="0 0 24 24"><path d="M14 3H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"/><path d="M14 3v6h6"/></symbol>
   <symbol id="ic-upload" viewBox="0 0 24 24"><path d="M12 16V4M7 9l5-5 5 5M4 20h16"/></symbol>
   <symbol id="ic-download" viewBox="0 0 24 24"><path d="M12 4v12M7 11l5 5 5-5M4 20h16"/></symbol>
-  <symbol id="ic-filter" viewBox="0 0 24 24"><path d="M4 5h16l-6 8v6l-4-2v-4z"/></symbol>
+  <symbol id="ic-pen" viewBox="0 0 24 24"><path d="M12 20h9M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/></symbol>
+  <symbol id="ic-inbox" viewBox="0 0 24 24"><path d="M22 12h-6l-2 3h-4l-2-3H2"/><path d="M5.5 5h13L22 12v6a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2v-6z"/></symbol>
+  <symbol id="ic-message" viewBox="0 0 24 24"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></symbol>
+  <symbol id="ic-alert" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 8v4M12 16h.01"/></symbol>
 </svg>
 
 <script>
@@ -447,59 +551,81 @@ td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; }
    ========================================================= */
 // Domaine e-mail autorisé – à remplacer par le domaine réel de l'entreprise.
 const ALLOWED_DOMAIN = 'cofina-demo.com';
+const FORM_CODE = '05SUP02V03';
 
 // Droits par rôle : chaque écran déclare la permission requise.
 const ROLES = {
-  agent:   { label: "Chargée de clientèle", perms: ['dashboard', 'dossiers', 'nouveau'] },
-  analyste:{ label: "Analyste crédit",      perms: ['dashboard', 'dossiers', 'decider'] },
-  comite:  { label: "Membre du comité",     perms: ['dashboard', 'dossiers', 'decider', 'audit'] },
-  admin:   { label: "Administrateur",       perms: ['dashboard', 'dossiers', 'nouveau', 'decider', 'utilisateurs', 'audit'] },
+  demandeur: { label: 'Demandeur',      perms: ['dashboard', 'demandes', 'nouveau'] },
+  manager:   { label: 'Manager (N+1)',  perms: ['dashboard', 'demandes', 'nouveau', 'valider'] },
+  admin:     { label: 'Administrateur', perms: ['dashboard', 'demandes', 'nouveau', 'valider', 'utilisateurs', 'audit'] },
 };
 const PERM_LABELS = {
-  dashboard: 'Tableau de bord', dossiers: 'Consulter les dossiers', nouveau: 'Créer une demande',
-  decider: 'Valider / rejeter', utilisateurs: 'Gérer les utilisateurs', audit: "Journal d'audit",
+  dashboard: 'Tableau de bord', demandes: 'Consulter ses demandes', nouveau: 'Créer une demande',
+  valider: 'Valider / rejeter (N+1)', utilisateurs: 'Gérer les utilisateurs', audit: "Journal d'audit",
 };
-
-const STEPS = ['Demande', 'Vérification KYC', 'Analyse crédit', 'Comité', 'Décaissement'];
 const STATUS = {
   brouillon: ['Brouillon', 'b-neutral'],
-  kyc:       ['Vérification KYC', 'b-info'],
-  analyse:   ['En analyse', 'b-accent'],
-  comite:    ['En comité', 'b-warning'],
-  approuve:  ['Approuvé', 'b-success'],
-  rejete:    ['Rejeté', 'b-danger'],
+  attente:   ['En attente N+1', 'b-warning'],
+  validee:   ['Validée', 'b-success'],
+  rejetee:   ['Rejetée', 'b-danger'],
 };
 
 /* =========================================================
    Données fictives
    ========================================================= */
-const DOSSIERS = [
-  { ref: 'FE-2026-0142', cliente: 'Aminata Koné',     entreprise: 'Atelier Wax & Co',      secteur: 'Couture',        ville: 'Abidjan',  montant: 7500000,  duree: 24, statut: 'analyse',  etape: 2, date: '2026-10-13T09:42', agent: 'Fatou Diallo' },
-  { ref: 'FE-2026-0141', cliente: 'Mariam Traoré',    entreprise: 'Saveurs du Sahel',      secteur: 'Agroalimentaire', ville: 'Dakar',    montant: 12000000, duree: 36, statut: 'comite',   etape: 3, date: '2026-10-12T15:10', agent: 'Awa Ndiaye' },
-  { ref: 'FE-2026-0139', cliente: 'Clarisse Yao',     entreprise: 'Yao Cosmétiques',       secteur: 'Cosmétique',     ville: 'Bouaké',   montant: 4200000,  duree: 18, statut: 'kyc',      etape: 1, date: '2026-10-11T11:05', agent: 'Fatou Diallo' },
-  { ref: 'FE-2026-0137', cliente: 'Ndeye Sarr',       entreprise: 'Sarr Transport',        secteur: 'Logistique',     ville: 'Thiès',    montant: 25000000, duree: 48, statut: 'approuve', etape: 4, date: '2026-10-09T08:30', agent: 'Awa Ndiaye' },
-  { ref: 'FE-2026-0134', cliente: 'Rokia Coulibaly',  entreprise: 'Boulangerie Le Fournil',secteur: 'Agroalimentaire', ville: 'Bamako',   montant: 9800000,  duree: 30, statut: 'approuve', etape: 5, date: '2026-10-06T16:45', agent: 'Fatou Diallo' },
-  { ref: 'FE-2026-0131', cliente: 'Grâce Mensah',     entreprise: 'Mensah Digital',        secteur: 'Services',       ville: 'Lomé',     montant: 3500000,  duree: 12, statut: 'rejete',   etape: 3, date: '2026-10-03T10:20', agent: 'Awa Ndiaye' },
-  { ref: 'FE-2026-0128', cliente: 'Adjoa Kouassi',    entreprise: 'Pharmacie Bel Air',     secteur: 'Santé',          ville: 'Abidjan',  montant: 18500000, duree: 36, statut: 'analyse',  etape: 2, date: '2026-10-02T14:00', agent: 'Fatou Diallo' },
-  { ref: 'FE-2026-0125', cliente: 'Khady Fall',       entreprise: 'Fall Agro',             secteur: 'Agriculture',    ville: 'Saint-Louis', montant: 6000000, duree: 24, statut: 'brouillon', etape: 0, date: '2026-09-30T09:15', agent: 'Awa Ndiaye' },
-];
-
 const USERS = [
-  { nom: 'Fatou Diallo',   email: 'fatou.diallo@',   role: 'agent',    actif: true,  derniere: '2026-10-14T08:12' },
-  { nom: 'Awa Ndiaye',     email: 'awa.ndiaye@',     role: 'agent',    actif: true,  derniere: '2026-10-13T17:40' },
-  { nom: 'Ibrahim Touré',  email: 'ibrahim.toure@',  role: 'analyste', actif: true,  derniere: '2026-10-14T09:03' },
-  { nom: 'Mireille Gbagbo',email: 'mireille.gbagbo@',role: 'comite',   actif: true,  derniere: '2026-10-12T11:22' },
-  { nom: 'Serge Kouadio',  email: 'serge.kouadio@',  role: 'admin',    actif: true,  derniere: '2026-10-14T07:55' },
-  { nom: 'Binta Sow',      email: 'binta.sow@',      role: 'analyste', actif: false, derniere: '2026-08-28T16:30' },
+  { id: 'fatou.diallo',    nom: 'Fatou Diallo',    fonction: 'Assistante Facilities',     service: 'FACILITIES', role: 'demandeur', n1: 'serge.kouadio',   actif: true,  derniere: '2026-10-14T08:12' },
+  { id: 'awa.ndiaye',      nom: 'Awa Ndiaye',      fonction: 'Technicienne maintenance',  service: 'FACILITIES', role: 'demandeur', n1: 'serge.kouadio',   actif: true,  derniere: '2026-10-13T17:40' },
+  { id: 'ibrahim.toure',   nom: 'Ibrahim Touré',   fonction: 'Chef de la sécurité',       service: 'FACILITIES', role: 'demandeur', n1: 'serge.kouadio',   actif: true,  derniere: '2026-10-14T09:03' },
+  { id: 'serge.kouadio',   nom: 'Serge Kouadio',   fonction: 'Responsable Facilities',    service: 'FACILITIES', role: 'manager',   n1: 'mireille.gbagbo', actif: true,  derniere: '2026-10-14T07:55' },
+  { id: 'mireille.gbagbo', nom: 'Mireille Gbagbo', fonction: 'Directrice administrative', service: 'DIRECTION',  role: 'admin',     n1: null,              actif: true,  derniere: '2026-10-12T11:22' },
+  { id: 'binta.sow',       nom: 'Binta Sow',       fonction: 'Agente d\'accueil',         service: 'FACILITIES', role: 'demandeur', n1: 'serge.kouadio',   actif: false, derniere: '2026-08-28T16:30' },
+];
+const userById = id => USERS.find(u => u.id === id);
+
+const seed = (ref, by, objet, proforma, montant, date, statut, extra = {}) => ({
+  ref, demandeur: by, n1: userById(by).n1, objet, proforma, montant, date, statut, description: '',
+  sigDemandeur: { by, at: date }, sigManager: null, commentaire: '', pieces: proforma ? [`Proforma_${ref}.pdf`] : [],
+  historique: [{ at: date, by, action: 'Fiche signée et transmise au N+1' }], ...extra,
+});
+const DEMANDES = [
+  seed('FED-2026-0142', 'fatou.diallo',  'Remplacement climatiseur salle de réunion B', true,  1850000, '2026-10-13T09:42', 'attente'),
+  seed('FED-2026-0141', 'awa.ndiaye',    'Fournitures d\'entretien – 4e trimestre',     false, 420000,  '2026-10-12T15:10', 'attente'),
+  seed('FED-2026-0140', 'serge.kouadio', 'Audit de conformité incendie du siège',       true,  2400000, '2026-10-12T10:05', 'attente'),
+  seed('FED-2026-0139', 'ibrahim.toure', 'Réparation de la barrière du parking',        true,  650000,  '2026-10-11T11:05', 'validee', {
+    sigManager: { by: 'serge.kouadio', at: '2026-10-11T16:20' },
+    historique: [{ at: '2026-10-11T11:05', by: 'ibrahim.toure', action: 'Fiche signée et transmise au N+1' }, { at: '2026-10-11T16:20', by: 'serge.kouadio', action: 'Demande validée et signée' }],
+  }),
+  seed('FED-2026-0137', 'fatou.diallo',  'Location de chaises pour le séminaire RH',    true,  300000,  '2026-10-10T08:30', 'rejetee', {
+    commentaire: 'Merci de joindre deux pro-formas comparatives avant de renvoyer la demande.',
+    historique: [{ at: '2026-10-10T08:30', by: 'fatou.diallo', action: 'Fiche signée et transmise au N+1' }, { at: '2026-10-10T14:12', by: 'serge.kouadio', action: 'Demande rejetée', note: 'Merci de joindre deux pro-formas comparatives avant de renvoyer la demande.' }],
+  }),
+  seed('FED-2026-0134', 'awa.ndiaye',    'Contrat de dératisation trimestriel',         true,  980000,  '2026-10-06T16:45', 'validee', {
+    sigManager: { by: 'serge.kouadio', at: '2026-10-07T09:10' },
+    historique: [{ at: '2026-10-06T16:45', by: 'awa.ndiaye', action: 'Fiche signée et transmise au N+1' }, { at: '2026-10-07T09:10', by: 'serge.kouadio', action: 'Demande validée et signée' }],
+  }),
+  seed('FED-2026-0131', 'fatou.diallo',  'Plantes et entretien de l\'accueil',          false, 150000,  '2026-10-03T10:20', 'validee', {
+    sigManager: { by: 'serge.kouadio', at: '2026-10-03T15:02' },
+    historique: [{ at: '2026-10-03T10:20', by: 'fatou.diallo', action: 'Fiche signée et transmise au N+1' }, { at: '2026-10-03T15:02', by: 'serge.kouadio', action: 'Demande validée et signée' }],
+  }),
+];
+let nextRef = 143;
+
+let NOTIFS = [
+  { to: 'serge.kouadio',   at: '2026-10-13T09:42', ref: 'FED-2026-0142', text: 'Fatou Diallo vous a transmis une demande à valider.', lu: false },
+  { to: 'serge.kouadio',   at: '2026-10-12T15:10', ref: 'FED-2026-0141', text: 'Awa Ndiaye vous a transmis une demande à valider.', lu: false },
+  { to: 'mireille.gbagbo', at: '2026-10-12T10:05', ref: 'FED-2026-0140', text: 'Serge Kouadio vous a transmis une demande à valider.', lu: false },
+  { to: 'fatou.diallo',    at: '2026-10-10T14:12', ref: 'FED-2026-0137', text: 'Votre demande a été rejetée par Serge Kouadio : « Merci de joindre deux pro-formas comparatives… »', lu: false },
+  { to: 'ibrahim.toure',   at: '2026-10-11T16:20', ref: 'FED-2026-0139', text: 'Votre demande a été validée et signée par Serge Kouadio.', lu: true },
 ];
 
 let AUDIT = [
-  { at: '2026-10-14T09:03', user: 'ibrahim.toure', action: 'Consultation', cible: 'FE-2026-0142', ip: '10.0.4.21' },
-  { at: '2026-10-14T08:12', user: 'fatou.diallo',  action: 'Connexion',    cible: '—',            ip: '10.0.2.8' },
-  { at: '2026-10-14T07:55', user: 'serge.kouadio', action: 'Modification de rôle', cible: 'binta.sow', ip: '10.0.1.3' },
-  { at: '2026-10-13T17:40', user: 'awa.ndiaye',    action: 'Pièce ajoutée', cible: 'FE-2026-0141', ip: '10.0.2.14' },
-  { at: '2026-10-13T16:02', user: 'mireille.gbagbo', action: 'Avis comité', cible: 'FE-2026-0137', ip: '10.0.5.2' },
-  { at: '2026-10-13T09:11', user: 'inconnu@gmail.com', action: 'Connexion refusée (domaine)', cible: '—', ip: '196.47.12.9' },
+  { at: '2026-10-14T09:03', user: 'ibrahim.toure',   action: 'Consultation',              cible: 'FED-2026-0139', ip: '10.0.4.21' },
+  { at: '2026-10-14T08:12', user: 'fatou.diallo',    action: 'Connexion',                 cible: '—',             ip: '10.0.2.8' },
+  { at: '2026-10-13T09:42', user: 'fatou.diallo',    action: 'Demande signée et transmise', cible: 'FED-2026-0142', ip: '10.0.2.8' },
+  { at: '2026-10-13T09:11', user: 'inconnu@gmail.com', action: 'Connexion refusée (domaine)', cible: '—',         ip: '196.47.12.9' },
+  { at: '2026-10-11T16:20', user: 'serge.kouadio',   action: 'Demande validée',           cible: 'FED-2026-0139', ip: '10.0.1.3' },
+  { at: '2026-10-10T14:12', user: 'serge.kouadio',   action: 'Demande rejetée',           cible: 'FED-2026-0137', ip: '10.0.1.3' },
 ];
 
 /* =========================================================
@@ -512,103 +638,179 @@ const toDate = v => v instanceof Date ? v : new Date(v);
 const fDate = v => { const d = toDate(v); return `${pad(d.getDate())}/${pad(d.getMonth() + 1)}/${d.getFullYear()}`; };
 const fTime = v => { const d = toDate(v); return `${pad(d.getHours())}:${pad(d.getMinutes())}`; };
 const fDateTime = v => `${fDate(v)} ${fTime(v)}`;
+const nowIso = () => { const d = new Date(); return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`; };
 const initials = name => name.split(' ').map(p => p[0]).slice(0, 2).join('').toUpperCase();
-const esc = s => String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const icon = (id, cls = '') => `<svg class="i ${cls}"><use href="#ic-${id}"/></svg>`;
 const badge = s => `<span class="badge ${STATUS[s][1]}">${STATUS[s][0]}</span>`;
+const nom = id => userById(id)?.nom ?? id;
+
+// Signature manuscrite simulée pour les données de démonstration
+const sigCache = {};
+function sigFromName(id) {
+  if (sigCache[id]) return sigCache[id];
+  const c = document.createElement('canvas'); c.width = 360; c.height = 110;
+  const x = c.getContext('2d');
+  x.fillStyle = '#2F3437'; x.font = 'italic 38px "Brush Script MT", "Segoe Script", cursive';
+  x.textBaseline = 'middle'; x.fillText(nom(id), 16, 52);
+  x.strokeStyle = '#2F3437'; x.lineWidth = 1.6; x.beginPath(); x.moveTo(20, 82); x.bezierCurveTo(120, 70, 220, 96, 330, 76); x.stroke();
+  return sigCache[id] = c.toDataURL();
+}
 
 /* =========================================================
-   Session & audit
+   Session, audit, notifications
    ========================================================= */
 let session = null;
+const $ = s => document.querySelector(s);
 
 function audit(action, cible = '—') {
   if (!session) return;
-  AUDIT.unshift({ at: new Date().toISOString(), user: session.email.split('@')[0], action, cible, ip: '10.0.3.17' });
+  AUDIT.unshift({ at: nowIso(), user: session.id, action, cible, ip: '10.0.3.17' });
 }
+function notify(to, ref, text) { if (to) NOTIFS.unshift({ to, at: nowIso(), ref, text, lu: false }); }
 const can = perm => session && ROLES[session.role].perms.includes(perm);
+
+// Ce que chaque profil peut voir : ses demandes, celles de son équipe (N+1), tout (admin).
+const visible = () => DEMANDES.filter(d => session.role === 'admin' || d.demandeur === session.id || d.n1 === session.id);
+const aValider = () => DEMANDES.filter(d => d.statut === 'attente' && d.n1 === session.id);
 
 /* =========================================================
    Connexion
    ========================================================= */
-const $ = s => document.querySelector(s);
+const DEMO = ['fatou.diallo', 'serge.kouadio', 'mireille.gbagbo'];
 $('#domainLabel').textContent = '@' + ALLOWED_DOMAIN;
-$('#role').innerHTML = Object.entries(ROLES).map(([k, r]) => `<option value="${k}"${k === 'admin' ? ' selected' : ''}>${r.label}</option>`).join('');
+function renderDemoAccounts() {
+  const current = $('#email').value.split('@')[0];
+  $('#demoAccounts').innerHTML = DEMO.map(id => { const u = userById(id); return `
+    <button type="button" class="demo-acc ${current === id ? 'on' : ''}" data-id="${id}">
+      <div class="avatar">${initials(u.nom)}</div><div><b>${u.nom}</b><span>${ROLES[u.role].label} · ${u.fonction}</span></div>
+    </button>`; }).join('');
+}
+$('#demoAccounts').addEventListener('click', e => {
+  const b = e.target.closest('.demo-acc'); if (!b) return;
+  $('#email').value = `${b.dataset.id}@${ALLOWED_DOMAIN}`; renderDemoAccounts();
+});
+$('#email').addEventListener('input', renderDemoAccounts);
+renderDemoAccounts();
+
+function startSession(u) {
+  session = { id: u.id, name: u.nom, role: u.role, email: `${u.id}@${ALLOWED_DOMAIN}` };
+  $('#meName').textContent = u.nom;
+  $('#meRole').textContent = `${ROLES[u.role].label} · ${u.service}`;
+  $('#meAvatar').textContent = initials(u.nom);
+  $('#profileSwitch').value = u.id;
+}
 
 $('#loginForm').addEventListener('submit', e => {
   e.preventDefault();
   const email = $('#email').value.trim().toLowerCase();
-  const pwd = $('#pwd').value;
   const err = $('#loginError');
   $('#email').classList.remove('invalid');
   if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) { err.textContent = 'Saisissez une adresse e-mail valide.'; $('#email').classList.add('invalid'); return; }
   if (email.split('@')[1] !== ALLOWED_DOMAIN) {
     err.textContent = `Accès refusé : seules les adresses @${ALLOWED_DOMAIN} sont autorisées.`;
     $('#email').classList.add('invalid');
-    AUDIT.unshift({ at: new Date().toISOString(), user: email, action: 'Connexion refusée (domaine)', cible: '—', ip: '10.0.3.17' });
+    AUDIT.unshift({ at: nowIso(), user: email, action: 'Connexion refusée (domaine)', cible: '—', ip: '10.0.3.17' });
     return;
   }
-  if (pwd.length < 8) { err.textContent = 'Mot de passe : 8 caractères minimum.'; return; }
+  if ($('#pwd').value.length < 8) { err.textContent = 'Mot de passe : 8 caractères minimum.'; return; }
+  const u = userById(email.split('@')[0]);
+  if (!u || !u.actif) { err.textContent = "Ce compte n'existe pas ou est désactivé. Contactez l'administrateur."; return; }
   err.textContent = '';
-  const local = email.split('@')[0];
-  const name = local.split(/[._-]/).map(p => p.charAt(0).toUpperCase() + p.slice(1)).join(' ');
-  session = { email, name, role: $('#role').value };
+  startSession(u);
   audit('Connexion');
   $('#login').classList.add('hidden');
   $('#app').classList.remove('hidden');
-  $('#meName').textContent = name;
-  $('#meRole').textContent = ROLES[session.role].label;
-  $('#meAvatar').textContent = initials(name);
   location.hash = '#/tableau-de-bord';
   render();
+});
+
+$('#profileSwitch').innerHTML = USERS.filter(u => u.actif).map(u => `<option value="${u.id}">${u.nom} – ${ROLES[u.role].label}</option>`).join('');
+$('#profileSwitch').addEventListener('change', e => {
+  audit('Déconnexion');
+  startSession(userById(e.target.value));
+  audit('Connexion');
+  toast(`Connecté(e) en tant que ${session.name}`);
+  if (location.hash === '#/tableau-de-bord') render(); else location.hash = '#/tableau-de-bord';
 });
 
 $('#logout').addEventListener('click', () => {
   audit('Déconnexion');
   session = null;
+  closeModal();
   $('#app').classList.add('hidden');
   $('#login').classList.remove('hidden');
-  $('#pwd').value = '';
   history.replaceState(null, '', location.pathname);
 });
 
 $('#menuToggle').addEventListener('click', () => $('#app').classList.toggle('nav-open'));
 $('#backdrop').addEventListener('click', () => $('#app').classList.remove('nav-open'));
-$('#today').textContent = fDateTime(new Date());
+$('#search').addEventListener('keydown', e => {
+  if (e.key !== 'Enter') return;
+  recherche = e.target.value.trim(); filtre = 'toutes';
+  if (location.hash === '#/demandes') render(); else location.hash = '#/demandes';
+});
+
+// Notifications
+function renderNotifBadge() {
+  const n = NOTIFS.filter(x => x.to === session.id && !x.lu).length;
+  $('#notifCount').textContent = n;
+  $('#notifCount').classList.toggle('hidden', n === 0);
+}
+$('#notifBtn').addEventListener('click', e => {
+  e.stopPropagation();
+  const p = $('#notifPanel');
+  if (!p.classList.contains('hidden')) { p.classList.add('hidden'); return; }
+  const mine = NOTIFS.filter(x => x.to === session.id);
+  p.innerHTML = `<h3>Notifications</h3>` + (mine.length ? mine.map(x => `
+    <div class="notif-item ${x.lu ? '' : 'unread'}" data-ref="${x.ref}">
+      <span>${esc(x.text)}</span><small>${x.ref} · ${fDateTime(x.at)}</small>
+    </div>`).join('') : `<div class="notif-empty">Aucune notification.</div>`);
+  p.classList.remove('hidden');
+});
+$('#notifPanel').addEventListener('click', e => {
+  const it = e.target.closest('.notif-item'); if (!it) return;
+  NOTIFS.filter(x => x.to === session.id && x.ref === it.dataset.ref).forEach(x => x.lu = true);
+  $('#notifPanel').classList.add('hidden');
+  location.hash = '#/demande/' + it.dataset.ref;
+});
+document.addEventListener('click', e => { if (!e.target.closest('#notifPanel')) $('#notifPanel').classList.add('hidden'); });
 
 /* =========================================================
    Navigation
    ========================================================= */
 const NAV = [
-  { group: 'Pilotage' },
-  { path: 'tableau-de-bord', label: 'Tableau de bord', icon: 'home',   perm: 'dashboard' },
-  { path: 'dossiers',        label: 'Dossiers',        icon: 'folder', perm: 'dossiers', count: () => DOSSIERS.filter(d => !['approuve', 'rejete'].includes(d.statut)).length },
-  { path: 'nouvelle-demande',label: 'Nouvelle demande',icon: 'plus',   perm: 'nouveau' },
+  { group: 'Dépenses' },
+  { path: 'tableau-de-bord',  label: 'Tableau de bord',  icon: 'home',   perm: 'dashboard' },
+  { path: 'nouvelle-demande', label: 'Nouvelle demande', icon: 'plus',   perm: 'nouveau' },
+  { path: 'demandes',         label: 'Demandes',         icon: 'folder', perm: 'demandes' },
+  { path: 'a-valider',        label: 'À valider',        icon: 'inbox',  perm: 'valider', count: () => aValider().length },
   { group: 'Administration' },
-  { path: 'utilisateurs',    label: 'Utilisateurs & rôles', icon: 'users', perm: 'utilisateurs' },
-  { path: 'audit',           label: "Journal d'audit", icon: 'log',    perm: 'audit' },
+  { path: 'utilisateurs',     label: 'Utilisateurs & rôles', icon: 'users', perm: 'utilisateurs' },
+  { path: 'audit',            label: "Journal d'audit",  icon: 'log',    perm: 'audit' },
 ];
 
 function renderNav(current) {
   const items = NAV.filter((n, i) => {
     if (!n.group) return can(n.perm);
-    // n'affiche un groupe que s'il contient au moins un élément autorisé
     for (let j = i + 1; j < NAV.length && !NAV[j].group; j++) if (can(NAV[j].perm)) return true;
     return false;
   });
-  $('#nav').innerHTML = items.map(n => n.group
-    ? `<div class="nav-label">${n.group}</div>`
-    : `<a class="nav-item ${current === n.path ? 'active' : ''}" href="#/${n.path}">${icon(n.icon)}<span>${n.label}</span>${n.count ? `<span class="count">${n.count()}</span>` : ''}</a>`
-  ).join('');
+  $('#nav').innerHTML = items.map(n => {
+    if (n.group) return `<div class="nav-label">${n.group}</div>`;
+    const c = n.count ? n.count() : 0;
+    return `<a class="nav-item ${current === n.path ? 'active' : ''}" href="#/${n.path}">${icon(n.icon)}<span>${n.label}</span>${c ? `<span class="count">${c}</span>` : ''}</a>`;
+  }).join('');
 }
 
 const ROUTES = {
-  'tableau-de-bord': { perm: 'dashboard', view: viewDashboard },
-  'dossiers':        { perm: 'dossiers',  view: viewDossiers },
-  'dossier':         { perm: 'dossiers',  view: viewDossier, nav: 'dossiers' },
-  'nouvelle-demande':{ perm: 'nouveau',   view: viewNouvelle },
-  'utilisateurs':    { perm: 'utilisateurs', view: viewUsers },
-  'audit':           { perm: 'audit',     view: viewAudit },
+  'tableau-de-bord':  { perm: 'dashboard', view: viewDashboard },
+  'demandes':         { perm: 'demandes',  view: viewDemandes },
+  'a-valider':        { perm: 'valider',   view: viewAValider },
+  'demande':          { perm: 'demandes',  view: viewDemande, nav: 'demandes' },
+  'nouvelle-demande': { perm: 'nouveau',   view: viewNouvelle },
+  'utilisateurs':     { perm: 'utilisateurs', view: viewUsers },
+  'audit':            { perm: 'audit',     view: viewAudit },
 };
 
 function render() {
@@ -616,179 +818,272 @@ function render() {
   const [, path = 'tableau-de-bord', param] = location.hash.split('/');
   const route = ROUTES[path] || ROUTES['tableau-de-bord'];
   renderNav(route.nav || path);
+  renderNotifBadge();
   $('#app').classList.remove('nav-open');
   const view = $('#view');
   view.style.animation = 'none'; void view.offsetWidth; view.style.animation = '';
   view.innerHTML = can(route.perm) ? route.view(param) : viewDenied();
+  if (afterRender) { const f = afterRender; afterRender = null; f(); }
   window.scrollTo(0, 0);
 }
+let afterRender = null;
 window.addEventListener('hashchange', render);
 
 /* =========================================================
-   Écrans
+   Composants
    ========================================================= */
 function pageHead(title, sub, actions = '', crumbs = '') {
   return `<div class="page-head"><div>${crumbs}<h1>${title}</h1>${sub ? `<p class="muted">${sub}</p>` : ''}</div><div class="toolbar">${actions}</div></div>`;
 }
+const crumbs = (label) => `<div class="crumbs"><a href="#/demandes">Demandes</a>${icon('chevron')}<span>${label}</span></div>`;
 
-function dossierRows(list, compact = false) {
-  return list.map(d => `
-    <tr class="clickable" onclick="location.hash='#/dossier/${d.ref}'">
-      <td><span class="ref">${d.ref}</span></td>
-      <td><div class="who"><div class="avatar">${initials(d.cliente)}</div><div><b>${esc(d.cliente)}</b><div class="muted" style="font-size:12px">${esc(d.entreprise)}</div></div></div></td>
-      ${compact ? '' : `<td>${esc(d.secteur)}</td>`}
-      <td class="num"><b>${fcfa(d.montant)}</b></td>
-      <td>${badge(d.statut)}</td>
-      <td>${fDate(d.date)} <span class="muted">${fTime(d.date)}</span></td>
-      <td>${icon('chevron', 'row-go')}</td>
-    </tr>`).join('');
+function demandeTable(list, empty = 'Aucune demande.') {
+  if (!list.length) return `<div class="card muted" style="text-align:center;padding:32px">${empty}</div>`;
+  return `<div class="table-wrap"><table>
+    <thead><tr><th>Référence</th><th>Demandeur</th><th>Objet</th><th class="num">Montant</th><th>Pro-forma</th><th>Statut</th><th>Date</th><th></th></tr></thead>
+    <tbody>${list.map(d => `
+      <tr class="clickable" onclick="location.hash='#/demande/${d.ref}'">
+        <td><span class="ref">${d.ref}</span></td>
+        <td><div class="who"><div class="avatar">${initials(nom(d.demandeur))}</div><div><b>${esc(nom(d.demandeur))}</b><div class="muted" style="font-size:12px">${esc(userById(d.demandeur).fonction)}</div></div></div></td>
+        <td style="max-width:280px;overflow:hidden;text-overflow:ellipsis">${esc(d.objet)}</td>
+        <td class="num"><b>${fcfa(d.montant)}</b></td>
+        <td>${d.proforma ? 'Oui' : 'Non'}</td>
+        <td>${badge(d.statut)}</td>
+        <td>${fDate(d.date)} <span class="muted">${fTime(d.date)}</span></td>
+        <td>${icon('chevron', 'row-go')}</td>
+      </tr>`).join('')}</tbody></table></div>`;
 }
-const dossierHead = (compact = false) => `<thead><tr><th>Référence</th><th>Cliente</th>${compact ? '' : '<th>Secteur</th>'}<th class="num">Montant</th><th>Statut</th><th>Mise à jour</th><th></th></tr></thead>`;
 
+/* Pad de signature (souris, stylet ou doigt) */
+function initPad(canvas) {
+  const ratio = window.devicePixelRatio || 1;
+  const r = canvas.getBoundingClientRect();
+  canvas.width = r.width * ratio; canvas.height = r.height * ratio;
+  const ctx = canvas.getContext('2d');
+  ctx.scale(ratio, ratio); ctx.lineWidth = 2.2; ctx.lineCap = 'round'; ctx.lineJoin = 'round'; ctx.strokeStyle = '#2F3437';
+  let drawing = false, last = null;
+  canvas.isEmpty = true;
+  const pos = e => { const b = canvas.getBoundingClientRect(); return { x: e.clientX - b.left, y: e.clientY - b.top }; };
+  canvas.addEventListener('pointerdown', e => { drawing = true; last = pos(e); canvas.setPointerCapture(e.pointerId); });
+  canvas.addEventListener('pointermove', e => {
+    if (!drawing) return;
+    const p = pos(e);
+    ctx.beginPath(); ctx.moveTo(last.x, last.y); ctx.lineTo(p.x, p.y); ctx.stroke();
+    last = p;
+    if (canvas.isEmpty) { canvas.isEmpty = false; canvas.classList.add('signed'); canvas.classList.remove('invalid'); }
+  });
+  const stop = () => { drawing = false; };
+  canvas.addEventListener('pointerup', stop); canvas.addEventListener('pointercancel', stop);
+  canvas.clear = () => { ctx.clearRect(0, 0, canvas.width, canvas.height); canvas.isEmpty = true; canvas.classList.remove('signed'); };
+  return canvas;
+}
+const padHtml = (id, hint) => `
+  <div class="pad-wrap"><canvas class="pad" id="${id}"></canvas><div class="pad-hint">${icon('pen')}&nbsp;${hint}</div></div>
+  <div class="pad-actions"><span class="muted">Signez avec la souris ou le doigt.</span><button type="button" class="link-btn" onclick="document.getElementById('${id}').clear()">Effacer</button></div>`;
+
+function signatureBlock(sig, waitingFor) {
+  if (sig) return `<div class="sign-box"><img src="${sig.img || sigFromName(sig.by)}" alt="Signature de ${esc(nom(sig.by))}"></div>
+    <div class="sign-meta">${esc(nom(sig.by))} · ${fDate(sig.at)} à ${fTime(sig.at)}</div>`;
+  return `<div class="sign-box">${waitingFor}</div><div class="sign-meta">&nbsp;</div>`;
+}
+
+/* La fiche, au format du formulaire papier 05SUP02V03 */
+function ficheView(d) {
+  const u = userById(d.demandeur);
+  const managerBox = d.statut === 'rejetee'
+    ? `<div class="sign-box" style="color:var(--danger)">${icon('x')}&nbsp;Rejetée par ${esc(nom(d.n1))}</div><div class="sign-meta">&nbsp;</div>`
+    : signatureBlock(d.sigManager, `${icon('clock')}&nbsp;En attente de ${esc(nom(d.n1))}`);
+  return `
+    <div class="fiche">
+      <div class="fiche-head"><span class="fiche-code">${FORM_CODE}</span><span class="fiche-title">Fiche d'engagement de dépenses</span><span class="ref">${d.ref}</span></div>
+      <div class="fiche-section">Demandeur</div>
+      <div class="fiche-grid">
+        <div class="fiche-cell"><span>Date</span><b>${fDate(d.date)}</b></div>
+        <div class="fiche-cell"><span>Objet</span><b>${esc(d.objet)}</b></div>
+        <div class="fiche-cell"><span>Demandeur</span><b>${esc(u.nom)}</b></div>
+        <div class="fiche-cell"><span>Service</span><b>${esc(u.service)}</b></div>
+        <div class="fiche-cell"><span>Fonction</span><b>${esc(u.fonction)}</b></div>
+        <div class="fiche-cell"><span>Référence N°</span><b>${d.ref}</b></div>
+        <div class="fiche-cell"><span>Pro-forma</span><b>${d.proforma ? 'Oui' : 'Non'}${d.pieces.length ? ` · <a href="#/demande/${d.ref}" onclick="event.preventDefault();toast('Aperçu de la pièce (démo)')">${esc(d.pieces[0])}</a>` : ''}</b></div>
+        <div class="fiche-cell"><span>Montant estimé</span><b>${fcfa(d.montant)}</b></div>
+        ${d.description ? `<div class="fiche-cell full"><span>Précisions</span><b style="font-weight:500">${esc(d.description)}</b></div>` : ''}
+      </div>
+      <div class="fiche-signs">
+        <div class="fiche-sign"><h3>Signature Demandeur</h3>${signatureBlock(d.sigDemandeur, 'Non signée')}</div>
+        <div class="fiche-sign"><h3>Signature Manager</h3>${managerBox}</div>
+      </div>
+    </div>`;
+}
+
+/* =========================================================
+   Écrans
+   ========================================================= */
 function viewDashboard() {
-  const enCours = DOSSIERS.filter(d => !['approuve', 'rejete', 'brouillon'].includes(d.statut));
-  const total = enCours.reduce((s, d) => s + d.montant, 0);
-  const secteurs = {};
-  DOSSIERS.forEach(d => secteurs[d.secteur] = (secteurs[d.secteur] || 0) + d.montant);
-  const max = Math.max(...Object.values(secteurs));
-  const kpi = (label, val, ic, delta, up) => `
-    <div class="card card-hover kpi">
+  const list = visible();
+  const mine = list.filter(d => d.demandeur === session.id);
+  const todo = aValider();
+  const sum = arr => arr.reduce((s, d) => s + d.montant, 0);
+  const kpi = (label, val, ic, sub, href) => `
+    <a class="card card-hover kpi" href="${href}" style="color:inherit">
       <div class="kpi-top">${label}<span class="kpi-ico">${icon(ic)}</span></div>
       <div class="kpi-val">${val}</div>
-      <div class="kpi-delta ${up ? 'up' : 'down'}">${delta} <span class="muted">vs mois dernier</span></div>
-    </div>`;
+      <div class="kpi-delta muted">${sub}</div>
+    </a>`;
+  const isN1 = can('valider');
+  const counts = Object.keys(STATUS).filter(s => s !== 'brouillon').map(s => [s, list.filter(d => d.statut === s).length]);
+  const max = Math.max(1, ...counts.map(c => c[1]));
   return `
-    ${pageHead(`Bonjour, ${esc(session.name.split(' ')[0])}`, `Synthèse du programme Fin'Elle au ${fDate(new Date())}.`,
-      can('nouveau') ? `<a class="btn btn-primary" href="#/nouvelle-demande">${icon('plus', 'i-plus')} Nouvelle demande</a>` : '')}
+    ${pageHead(`Bonjour, ${esc(session.name.split(' ')[0])}`, `${ROLES[session.role].label} · situation au ${fDate(new Date())} à ${fTime(new Date())}.`,
+      `<a class="btn btn-primary" href="#/nouvelle-demande">${icon('plus', 'i-plus')} Nouvelle demande</a>`)}
+    ${isN1 && todo.length ? `<div class="alert alert-warning">${icon('inbox')}<div><b>${todo.length} demande${todo.length > 1 ? 's' : ''} en attente de votre signature</b><p>Vos collaborateurs attendent votre validation.</p><a class="btn btn-ghost btn-sm" href="#/a-valider">Voir les demandes ${icon('arrow', 'i-arrow')}</a></div></div>` : ''}
     <div class="kpis">
-      ${kpi('Dossiers en cours', enCours.length, 'folder', '▲ +3', true)}
-      ${kpi('Montant en instruction', fcfa(total), 'wallet', '▲ +12 %', true)}
-      ${kpi("Taux d'approbation", '78 %', 'trend', '▲ +4 pts', true)}
-      ${kpi('Délai moyen de décision', '9 jours', 'clock', '▼ −2 j', true)}
+      ${isN1 ? kpi('À valider', todo.length, 'inbox', fcfa(sum(todo)), '#/a-valider') : kpi('Mes demandes en attente', mine.filter(d => d.statut === 'attente').length, 'clock', 'chez votre N+1', '#/demandes')}
+      ${kpi('Validées', list.filter(d => d.statut === 'validee').length, 'check', fcfa(sum(list.filter(d => d.statut === 'validee'))) + ' engagés', '#/demandes')}
+      ${kpi('Rejetées', list.filter(d => d.statut === 'rejetee').length, 'message', 'avec commentaire', '#/demandes')}
+      ${kpi('Montant total demandé', fcfa(sum(list)), 'wallet', `${list.length} demandes`, '#/demandes')}
     </div>
     <div class="grid-2">
       <div class="card">
-        <div class="card-head"><h2>Dossiers récents</h2><a class="btn btn-ghost btn-sm" href="#/dossiers">Tout voir ${icon('arrow', 'i-arrow')}</a></div>
-        <div class="table-wrap"><table>${dossierHead(true)}<tbody>${dossierRows(DOSSIERS.slice(0, 5), true)}</tbody></table></div>
+        <div class="card-head"><h2>${isN1 ? 'Dernières demandes' : 'Mes dernières demandes'}</h2><a class="btn btn-ghost btn-sm" href="#/demandes">Tout voir ${icon('arrow', 'i-arrow')}</a></div>
+        ${demandeTable((isN1 ? list : mine).slice(0, 5), "Vous n'avez pas encore de demande.")}
       </div>
       <div class="card">
-        <div class="card-head"><h2>Montants par secteur</h2></div>
+        <div class="card-head"><h2>Par statut</h2></div>
         <div class="bars">
-          ${Object.entries(secteurs).sort((a, b) => b[1] - a[1]).map(([s, v], i) => `
-            <div class="bar-row"><span>${s}</span><span class="num">${nf.format(v / 1e6).replace(/\s/g, ' ')} M</span><div class="bar-track"><div class="bar-fill" style="width:${(v / max * 100).toFixed(1)}%;animation-delay:${i * 60}ms"></div></div></div>`).join('')}
+          ${counts.map(([s, n], i) => `
+            <div class="bar-row"><span>${STATUS[s][0]}</span><span class="num">${n}</span><div class="bar-track"><div class="bar-fill" style="width:${(n / max * 100).toFixed(1)}%;animation-delay:${i * 60}ms"></div></div></div>`).join('')}
         </div>
-        <p class="muted" style="font-size:12px;margin:14px 0 0">Montants en millions de FCFA.</p>
+        <div class="list" style="margin-top:18px">
+          <h3 style="margin-bottom:4px">Circuit de validation</h3>
+          ${[['pen', 'Le demandeur remplit et signe la fiche'], ['inbox', 'Le N+1 reçoit la demande'], ['check', 'Il valide en signant… '], ['message', '…ou rejette avec un commentaire']].map(([ic, t]) => `<div class="list-item"><div class="doc-ico">${icon(ic)}</div><div class="grow"><span style="font-size:13px;color:var(--text)">${t}</span></div></div>`).join('')}
+        </div>
       </div>
     </div>`;
 }
 
-let filtre = 'tous';
-function viewDossiers() {
-  const filters = [['tous', 'Tous'], ['kyc', 'KYC'], ['analyse', 'En analyse'], ['comite', 'En comité'], ['approuve', 'Approuvés'], ['rejete', 'Rejetés']];
-  const list = filtre === 'tous' ? DOSSIERS : DOSSIERS.filter(d => d.statut === filtre);
+let filtre = 'toutes', recherche = '';
+function viewDemandes() {
+  const filters = [['toutes', 'Toutes'], ['attente', 'En attente N+1'], ['validee', 'Validées'], ['rejetee', 'Rejetées']];
+  let list = visible();
+  if (filtre !== 'toutes') list = list.filter(d => d.statut === filtre);
+  if (recherche) { const q = recherche.toLowerCase(); list = list.filter(d => [d.ref, d.objet, nom(d.demandeur)].some(v => v.toLowerCase().includes(q))); }
+  const scope = session.role === 'admin' ? 'Toutes les demandes' : can('valider') ? 'Vos demandes et celles de votre équipe' : 'Vos demandes';
   return `
-    ${pageHead('Dossiers de financement', `${DOSSIERS.length} dossiers · ${fcfa(DOSSIERS.reduce((s, d) => s + d.montant, 0))} demandés`,
-      `<button class="btn btn-ghost" onclick="toast('Export CSV généré (démo)'); audit('Export', 'Liste des dossiers')">${icon('download')} Exporter</button>` +
-      (can('nouveau') ? `<a class="btn btn-primary" href="#/nouvelle-demande">${icon('plus', 'i-plus')} Nouvelle demande</a>` : ''))}
-    <div class="chips">${filters.map(([k, l]) => `<button class="chip ${filtre === k ? 'on' : ''}" onclick="filtre='${k}';render()">${l}</button>`).join('')}</div>
-    <div class="table-wrap"><table>${dossierHead()}<tbody>${list.length ? dossierRows(list) : `<tr><td colspan="7" class="muted" style="text-align:center;padding:32px">Aucun dossier pour ce filtre.</td></tr>`}</tbody></table></div>`;
+    ${pageHead("Fiches d'engagement de dépenses", `${scope} · ${visible().length} au total`,
+      `<button class="btn btn-ghost" onclick="toast('Export généré (démo)'); audit('Export', 'Liste des demandes')">${icon('download')} Exporter</button>
+       <a class="btn btn-primary" href="#/nouvelle-demande">${icon('plus', 'i-plus')} Nouvelle demande</a>`)}
+    <div class="toolbar" style="justify-content:space-between">
+      <div class="chips">${filters.map(([k, l]) => `<button class="chip ${filtre === k ? 'on' : ''}" onclick="filtre='${k}';render()">${l}</button>`).join('')}</div>
+      ${recherche ? `<span class="chip on" onclick="recherche='';$('#search').value='';render()">« ${esc(recherche)} » ${icon('x')}</span>` : ''}
+    </div>
+    ${demandeTable(list, 'Aucune demande pour ce filtre.')}`;
 }
 
-function viewDossier(ref) {
-  const d = DOSSIERS.find(x => x.ref === ref);
-  if (!d) return pageHead('Dossier introuvable', '', `<a class="btn btn-ghost" href="#/dossiers">Retour</a>`);
-  audit('Consultation', d.ref);
-  const finished = d.statut === 'approuve' && d.etape === 5;
-  const steps = STEPS.map((s, i) => {
-    const state = i < d.etape || finished ? 'done' : i === d.etape && d.statut !== 'rejete' ? 'active' : '';
-    return `<div class="step ${state}"><div class="dotnum">${state === 'done' ? icon('check') : i + 1}</div>${s}</div>`;
-  }).join('');
-  const mensualite = Math.round(d.montant * (0.012 / (1 - Math.pow(1.012, -d.duree))));
-  const docs = [['Pièce d\'identité', 'CNI – recto/verso', 'b-success', 'Validé'], ['Registre du commerce', 'RCCM', 'b-success', 'Validé'], ['Relevés bancaires', '6 derniers mois', 'b-warning', 'À compléter'], ['Plan de financement', 'PDF · 420 Ko', 'b-info', 'Reçu']];
-  const decide = can('decider') && ['analyse', 'comite'].includes(d.statut);
+function viewAValider() {
+  const list = aValider();
   return `
-    ${pageHead(esc(d.entreprise), `${badge(d.statut)} <span class="ref" style="margin-left:8px">${d.ref}</span>`,
-      decide ? `<button class="btn btn-ghost" onclick="decision('${d.ref}','rejete')">${icon('x')} Rejeter</button><button class="btn btn-primary" onclick="decision('${d.ref}','approuve')">${icon('check')} Valider l'étape</button>` : '',
-      `<div class="crumbs"><a href="#/dossiers">Dossiers</a>${icon('chevron')}<span>${d.ref}</span></div>`)}
+    ${pageHead('À valider', 'Demandes de vos collaborateurs en attente de votre signature.')}
+    ${demandeTable(list, `${icon('check')} Vous êtes à jour : aucune demande en attente.`)}`;
+}
+
+function viewDemande(ref) {
+  const d = DEMANDES.find(x => x.ref === ref);
+  if (!d || !visible().includes(d)) return pageHead('Demande introuvable', "Cette demande n'existe pas ou ne vous est pas accessible.", `<a class="btn btn-ghost" href="#/demandes">Retour</a>`);
+  audit('Consultation', d.ref);
+  NOTIFS.filter(x => x.to === session.id && x.ref === ref).forEach(x => x.lu = true);
+  const isN1 = d.n1 === session.id && d.statut === 'attente';
+  const isOwner = d.demandeur === session.id;
+  const actions = isN1 ? `
+    <button class="btn btn-ghost" onclick="openReject('${d.ref}')">${icon('x')} Rejeter</button>
+    <button class="btn btn-primary" onclick="openValidate('${d.ref}')">${icon('pen')} Valider et signer</button>` : '';
+  let banner = '';
+  if (d.statut === 'rejetee') banner = `<div class="alert alert-danger">${icon('message')}<div><b>Demande rejetée par ${esc(nom(d.n1))}</b><p>« ${esc(d.commentaire)} »</p>${isOwner ? `<a class="btn btn-ghost btn-sm" href="#/nouvelle-demande/${d.ref}">${icon('pen')} Corriger et renvoyer</a>` : ''}</div></div>`;
+  else if (d.statut === 'validee') banner = `<div class="alert alert-success">${icon('check')}<div><b>Demande validée et signée par ${esc(nom(d.n1))}</b><p>Le ${fDate(d.sigManager.at)} à ${fTime(d.sigManager.at)}.${d.commentaire ? ` Commentaire : « ${esc(d.commentaire)} »` : ''}</p></div></div>`;
+  else if (isN1) banner = `<div class="alert alert-warning">${icon('inbox')}<div><b>Cette demande attend votre décision</b><p>Validez-la en signant, ou rejetez-la avec un commentaire qui sera transmis à ${esc(nom(d.demandeur))}.</p></div></div>`;
+  else if (d.statut === 'attente') banner = `<div class="alert alert-warning">${icon('clock')}<div><b>En attente de validation</b><p>Transmise à ${esc(nom(d.n1))} (N+1) le ${fDate(d.date)} à ${fTime(d.date)}.</p></div></div>`;
+  const step = d.statut === 'attente' ? 2 : 3;
+  const steps = ['Fiche remplie', 'Signature demandeur', 'Décision du N+1'].map((s, i) => {
+    const state = i < step ? 'done' : i === step ? 'active' : '';
+    const label = i === 2 && d.statut === 'validee' ? 'Validée par le N+1' : i === 2 && d.statut === 'rejetee' ? 'Rejetée par le N+1' : s;
+    return `<div class="step ${state}"><div class="dotnum">${state === 'done' ? icon(i === 2 && d.statut === 'rejetee' ? 'x' : 'check') : i + 1}</div>${label}</div>`;
+  }).join('');
+  return `
+    ${pageHead(esc(d.objet), `${badge(d.statut)} <span class="ref" style="margin-left:8px">${d.ref}</span>`, actions, crumbs(d.ref))}
+    ${banner}
     <div class="card"><div class="stepper">${steps}</div></div>
-    <div class="grid-2-even">
-      <div class="card card-hover">
-        <div class="card-head"><h2>Demande</h2></div>
-        <div class="kv">
-          <div><span>Montant demandé</span><b>${fcfa(d.montant)}</b></div>
-          <div><span>Durée</span><b>${d.duree} mois</b></div>
-          <div><span>Mensualité estimée</span><b>${fcfa(mensualite)}</b></div>
-          <div><span>Secteur</span><b>${esc(d.secteur)}</b></div>
-          <div><span>Déposé le</span><b>${fDateTime(d.date)}</b></div>
-          <div><span>Chargée de clientèle</span><b>${esc(d.agent)}</b></div>
-        </div>
-      </div>
-      <div class="card card-hover">
-        <div class="card-head"><h2>Cliente</h2></div>
-        <div class="kv">
-          <div><span>Nom</span><b>${esc(d.cliente)}</b></div>
-          <div><span>Ville</span><b>${esc(d.ville)}</b></div>
-          <div><span>Téléphone</span><b>+225 07 00 00 00 00</b></div>
-          <div><span>E-mail</span><b>cliente@exemple.test</b></div>
-          <div><span>Ancienneté activité</span><b>4 ans</b></div>
-          <div><span>Chiffre d'affaires annuel</span><b>${fcfa(d.montant * 3.2)}</b></div>
-        </div>
-      </div>
-      <div class="card">
-        <div class="card-head"><h2>Pièces justificatives</h2>${can('nouveau') ? `<button class="btn btn-ghost btn-sm" onclick="toast('Pièce ajoutée (démo)'); audit('Pièce ajoutée', '${d.ref}')">${icon('upload')} Ajouter</button>` : ''}</div>
-        <div class="list">${docs.map(([t, s, c, l]) => `<div class="list-item"><div class="doc-ico">${icon('file')}</div><div class="grow"><b>${t}</b><span>${s}</span></div><span class="badge ${c}">${l}</span></div>`).join('')}</div>
-      </div>
+    <div class="grid-2">
+      <div style="min-width:0">${ficheView(d)}</div>
       <div class="card">
         <div class="card-head"><h2>Historique</h2></div>
         <div class="timeline">
-          ${AUDIT.filter(a => a.cible === d.ref).slice(0, 3).concat([{ at: d.date, user: d.agent.toLowerCase().replace(' ', '.'), action: 'Dossier déposé' }]).map(a => `
-            <div class="tl"><div class="pt"></div><div><b>${esc(a.action)}</b><small>${esc(a.user)} · ${fDateTime(a.at)}</small></div></div>`).join('')}
+          ${[...d.historique].reverse().map(h => `
+            <div class="tl"><div class="pt"></div><div><b>${esc(h.action)}</b><small>${esc(nom(h.by))} · ${fDateTime(h.at)}</small>${h.note ? `<p style="margin:6px 0 0;padding:8px 10px;background:var(--bg);border-radius:8px;border:1px solid var(--border);font-size:13px">« ${esc(h.note)} »</p>` : ''}</div></div>`).join('')}
         </div>
       </div>
     </div>`;
 }
 
-let wizStep = 0;
-function viewNouvelle() {
-  const labels = ['Cliente', 'Entreprise', 'Financement', 'Pièces'];
-  const panes = [
-    `<div class="field"><label>Nom et prénom</label><input class="input" placeholder="Ex. Aïcha Bamba"></div>
-     <div class="field"><label>Date de naissance</label><input class="input" placeholder="JJ/MM/AAAA" inputmode="numeric"></div>
-     <div class="field"><label>Téléphone</label><input class="input" placeholder="+225 00 00 00 00 00"></div>
-     <div class="field"><label>Pièce d'identité n°</label><input class="input" placeholder="CI000000000"></div>`,
-    `<div class="field"><label>Raison sociale</label><input class="input" placeholder="Nom de l'entreprise"></div>
-     <div class="field"><label>Secteur</label><select class="input"><option>Commerce</option><option>Agroalimentaire</option><option>Couture</option><option>Services</option><option>Agriculture</option></select></div>
-     <div class="field"><label>Date de création</label><input class="input" placeholder="JJ/MM/AAAA"></div>
-     <div class="field"><label>Chiffre d'affaires annuel (FCFA)</label><input class="input" placeholder="0" inputmode="numeric"></div>`,
-    `<div class="field"><label>Montant demandé (FCFA)</label><input class="input" placeholder="Ex. 5 000 000" inputmode="numeric"></div>
-     <div class="field"><label>Durée (mois)</label><select class="input"><option>12</option><option>18</option><option selected>24</option><option>36</option><option>48</option></select></div>
-     <div class="field full"><label>Objet du financement</label><textarea class="input" rows="3" placeholder="Décrivez l'utilisation des fonds"></textarea></div>`,
-    `<div class="full upload" onclick="toast('Fichier ajouté (démo)')">${icon('upload')}<div><b>Déposer les pièces justificatives</b></div><div style="font-size:12.5px">PDF, JPG ou PNG · 10 Mo max par fichier</div></div>`,
-  ];
+/* Nouvelle demande (ou correction d'une demande rejetée) */
+function viewNouvelle(ref) {
+  const me = userById(session.id);
+  const src = ref ? DEMANDES.find(d => d.ref === ref && d.demandeur === session.id && d.statut === 'rejetee') : null;
+  const draftRef = src ? src.ref : `FED-2026-${String(nextRef).padStart(4, '0')}`;
+  const manager = userById(me.n1);
+  afterRender = () => {
+    initPad($('#padDemandeur')).addEventListener('pointerdown', () => { $('#eSig').textContent = ''; });
+    // Efface le message d'erreur d'un champ dès qu'il est corrigé
+    $('#ficheForm').addEventListener('input', e => {
+      const err = e.target.closest('.fiche-cell')?.querySelector('.field-error');
+      if (err) err.textContent = '';
+      e.target.classList.remove('invalid');
+    });
+  };
   return `
-    ${pageHead('Nouvelle demande de financement', 'Les champs sont enregistrés en brouillon à chaque étape.', '', `<div class="crumbs"><a href="#/dossiers">Dossiers</a>${icon('chevron')}<span>Nouvelle demande</span></div>`)}
-    <div class="card"><div class="stepper">${labels.map((l, i) => `<div class="step ${i < wizStep ? 'done' : i === wizStep ? 'active' : ''}"><div class="dotnum">${i < wizStep ? icon('check') : i + 1}</div>${l}</div>`).join('')}</div></div>
-    <div class="card" style="display:grid;gap:20px">
-      <h2>${labels[wizStep]}</h2>
-      <div class="form-grid">${panes[wizStep]}</div>
-      <div class="form-actions">
-        <button class="btn btn-ghost" ${wizStep === 0 ? 'disabled style="opacity:.5;pointer-events:none"' : ''} onclick="wizStep--;render()">Précédent</button>
-        ${wizStep < labels.length - 1
-          ? `<button class="btn btn-primary" onclick="wizStep++;render()">Continuer ${icon('arrow', 'i-arrow')}</button>`
-          : `<button class="btn btn-primary" onclick="submitDemande()">${icon('check')} Soumettre la demande</button>`}
+    ${pageHead(src ? 'Corriger la demande' : 'Nouvelle demande', manager ? `Une fois signée, la fiche sera transmise à ${esc(manager.nom)} (${esc(manager.fonction)}) pour validation.` : "Aucun N+1 n'est défini pour votre compte : contactez l'administrateur.", '', crumbs(src ? draftRef : 'Nouvelle demande'))}
+    ${src ? `<div class="alert alert-danger">${icon('message')}<div><b>Commentaire de ${esc(nom(src.n1))}</b><p>« ${esc(src.commentaire)} »</p></div></div>` : ''}
+    <form class="fiche" id="ficheForm" novalidate>
+      <div class="fiche-head"><span class="fiche-code">${FORM_CODE}</span><span class="fiche-title">Fiche d'engagement de dépenses</span><span class="ref">${draftRef}</span></div>
+      <div class="fiche-section">Demandeur</div>
+      <div class="fiche-grid">
+        <div class="fiche-cell"><span>Date</span><b>${fDate(new Date())}</b></div>
+        <div class="fiche-cell"><label for="fObjet" style="font-size:12px;color:var(--text-muted);font-weight:600">Objet *</label><input class="input" id="fObjet" value="${esc(src?.objet ?? '')}" placeholder="Ex. Remplacement des néons du hall"><div class="field-error" id="eObjet"></div></div>
+        <div class="fiche-cell"><span>Demandeur</span><b>${esc(me.nom)}</b></div>
+        <div class="fiche-cell"><span>Service</span><b>${esc(me.service)}</b></div>
+        <div class="fiche-cell"><span>Fonction</span><b>${esc(me.fonction)}</b></div>
+        <div class="fiche-cell"><span>Référence N°</span><b>${draftRef}</b></div>
+        <div class="fiche-cell"><span>Pro-forma *</span>
+          <div class="radio-row">
+            <label><input type="radio" name="proforma" value="oui" ${src?.proforma ? 'checked' : ''} onchange="$('#pfUpload').classList.remove('hidden')"> Oui</label>
+            <label><input type="radio" name="proforma" value="non" ${src && !src.proforma ? 'checked' : ''} onchange="$('#pfUpload').classList.add('hidden')"> Non</label>
+          </div>
+          <div class="field-error" id="eProforma"></div>
+          <div class="upload ${src?.proforma ? '' : 'hidden'}" id="pfUpload" style="padding:12px" onclick="attachProforma(this, '${draftRef}')">${icon('upload')}<div><b>Joindre la pro-forma</b> · PDF, JPG, PNG</div></div>
+        </div>
+        <div class="fiche-cell"><label for="fMontant" style="font-size:12px;color:var(--text-muted);font-weight:600">Montant estimé (FCFA) *</label><input class="input" id="fMontant" inputmode="numeric" value="${src ? nf.format(src.montant).replace(/\s/g, ' ') : ''}" placeholder="Ex. 750 000" oninput="this.value=this.value.replace(/[^0-9]/g,'').replace(/\\B(?=(\\d{3})+(?!\\d))/g,' ')"><div class="field-error" id="eMontant"></div></div>
+        <div class="fiche-cell full"><label for="fDesc" style="font-size:12px;color:var(--text-muted);font-weight:600">Précisions (facultatif)</label><textarea class="input" id="fDesc" rows="2" placeholder="Fournisseur pressenti, urgence, lieu…">${esc(src?.description ?? '')}</textarea></div>
       </div>
+      <div class="fiche-signs">
+        <div class="fiche-sign"><h3>Signature Demandeur *</h3>${padHtml('padDemandeur', 'Signez ici')}<div class="field-error" id="eSig"></div></div>
+        <div class="fiche-sign"><h3>Signature Manager</h3><div class="sign-box">${icon('lock')}&nbsp;Réservée au N+1${manager ? ` : ${esc(manager.nom)}` : ''}</div><div class="sign-meta">Sera complétée lors de la validation.</div></div>
+      </div>
+    </form>
+    <div class="form-actions">
+      <a class="btn btn-ghost" href="#/demandes">Annuler</a>
+      <button class="btn btn-primary" onclick="submitFiche('${src ? src.ref : ''}')" ${manager ? '' : 'disabled style="opacity:.5;pointer-events:none"'}>${icon('pen')} Signer et transmettre au N+1 ${icon('arrow', 'i-arrow')}</button>
     </div>`;
 }
 
 function viewUsers() {
   return `
-    ${pageHead('Utilisateurs & rôles', `Accès limité aux adresses @${ALLOWED_DOMAIN}.`, `<button class="btn btn-primary" onclick="toast('Invitation envoyée (démo)'); audit('Invitation utilisateur')">${icon('plus', 'i-plus')} Inviter</button>`)}
+    ${pageHead('Utilisateurs & rôles', `Accès limité aux adresses @${ALLOWED_DOMAIN}. Le N+1 reçoit les demandes à valider.`, `<button class="btn btn-primary" onclick="toast('Invitation envoyée (démo)'); audit('Invitation utilisateur')">${icon('plus', 'i-plus')} Inviter</button>`)}
     <div class="table-wrap"><table>
-      <thead><tr><th>Utilisateur</th><th>E-mail</th><th>Rôle</th><th>Statut</th><th>Dernière connexion</th></tr></thead>
+      <thead><tr><th>Utilisateur</th><th>E-mail</th><th>Fonction</th><th>Service</th><th>Rôle</th><th>N+1</th><th>Statut</th><th>Dernière connexion</th></tr></thead>
       <tbody>${USERS.map(u => `<tr>
         <td><div class="who"><div class="avatar">${initials(u.nom)}</div><b>${esc(u.nom)}</b></div></td>
-        <td class="muted">${u.email}${ALLOWED_DOMAIN}</td>
+        <td class="muted">${u.id}@${ALLOWED_DOMAIN}</td>
+        <td>${esc(u.fonction)}</td><td>${u.service}</td>
         <td>${ROLES[u.role].label}</td>
+        <td>${u.n1 ? esc(nom(u.n1)) : '<span class="muted">—</span>'}</td>
         <td>${u.actif ? '<span class="badge b-success">Actif</span>' : '<span class="badge b-neutral">Désactivé</span>'}</td>
         <td>${fDateTime(u.derniere)}</td></tr>`).join('')}</tbody>
     </table></div>
@@ -809,7 +1104,7 @@ function viewAudit() {
       <tbody>${AUDIT.map(a => `<tr>
         <td>${fDate(a.at)}</td><td>${fTime(a.at)}</td>
         <td>${esc(a.user)}</td>
-        <td>${/refus/i.test(a.action) ? `<span class="badge b-danger">${esc(a.action)}</span>` : esc(a.action)}</td>
+        <td>${/refus|rejet/i.test(a.action) ? `<span class="badge b-danger">${esc(a.action)}</span>` : /valid/i.test(a.action) ? `<span class="badge b-success">${esc(a.action)}</span>` : esc(a.action)}</td>
         <td><span class="ref">${esc(a.cible)}</span></td>
         <td class="ref">${a.ip}</td></tr>`).join('')}</tbody>
     </table></div>`;
@@ -828,24 +1123,103 @@ function toast(msg) {
   t.querySelector('span').textContent = msg;
   t.classList.add('show');
   clearTimeout(toast.t);
-  toast.t = setTimeout(() => t.classList.remove('show'), 2400);
+  toast.t = setTimeout(() => t.classList.remove('show'), 2600);
 }
 
-function decision(ref, verdict) {
-  const d = DOSSIERS.find(x => x.ref === ref);
-  if (verdict === 'rejete') { d.statut = 'rejete'; }
-  else { d.etape = Math.min(d.etape + 1, 4); d.statut = d.etape >= 4 ? 'approuve' : d.etape === 3 ? 'comite' : 'analyse'; }
-  d.date = new Date().toISOString();
-  audit(verdict === 'rejete' ? 'Dossier rejeté' : 'Étape validée', ref);
-  toast(verdict === 'rejete' ? 'Dossier rejeté' : 'Étape validée');
+function attachProforma(el, ref) {
+  el.dataset.file = `Proforma_${ref}.pdf`;
+  el.innerHTML = `${icon('file')}<div><b>Proforma_${ref}.pdf</b> · 312 Ko</div>`;
+  toast('Pro-forma jointe (démo)');
+}
+
+function submitFiche(resubmitRef) {
+  const objet = $('#fObjet').value.trim();
+  const pf = document.querySelector('input[name=proforma]:checked');
+  const montant = Number($('#fMontant').value.replace(/\D/g, ''));
+  const sigPad = $('#padDemandeur');
+  let ok = true;
+  const setErr = (id, msg, el) => { $(id).textContent = msg; if (el) el.classList.toggle('invalid', !!msg); if (msg) ok = false; };
+  setErr('#eObjet', objet.length < 5 ? "Décrivez l'objet de la dépense (5 caractères minimum)." : '', $('#fObjet'));
+  setErr('#eProforma', pf ? '' : 'Indiquez si une pro-forma est jointe.');
+  setErr('#eMontant', montant > 0 ? '' : 'Saisissez le montant estimé en FCFA.', $('#fMontant'));
+  setErr('#eSig', sigPad.isEmpty ? 'Votre signature est obligatoire pour transmettre la fiche.' : '');
+  if (sigPad.isEmpty) sigPad.classList.add('invalid');
+  if (!ok) { toast('Complétez les champs signalés'); return; }
+
+  const now = nowIso();
+  const me = userById(session.id);
+  const sig = { by: session.id, at: now, img: sigPad.toDataURL() };
+  const pieces = pf.value === 'oui' ? [$('#pfUpload').dataset.file || `Proforma_${resubmitRef || 'jointe'}.pdf`] : [];
+  let d;
+  if (resubmitRef) {
+    d = DEMANDES.find(x => x.ref === resubmitRef);
+    Object.assign(d, { objet, proforma: pf.value === 'oui', montant, description: $('#fDesc').value.trim(), date: now, statut: 'attente', sigDemandeur: sig, sigManager: null, commentaire: '', pieces });
+    d.historique.push({ at: now, by: session.id, action: 'Fiche corrigée, signée et renvoyée au N+1' });
+  } else {
+    const ref = `FED-2026-${String(nextRef++).padStart(4, '0')}`;
+    d = { ref, demandeur: session.id, n1: me.n1, objet, proforma: pf.value === 'oui', montant, description: $('#fDesc').value.trim(), date: now, statut: 'attente',
+          sigDemandeur: sig, sigManager: null, commentaire: '', pieces: pieces.map(p => p.replace('jointe', ref)), historique: [{ at: now, by: session.id, action: 'Fiche signée et transmise au N+1' }] };
+    DEMANDES.unshift(d);
+  }
+  notify(d.n1, d.ref, `${me.nom} vous a transmis une demande à valider${resubmitRef ? ' (version corrigée)' : ''}.`);
+  audit(resubmitRef ? 'Demande corrigée et renvoyée' : 'Demande signée et transmise', d.ref);
+  toast(`Demande ${d.ref} transmise à ${nom(d.n1)}`);
+  location.hash = '#/demande/' + d.ref;
+}
+
+function openModal(html, onReady) {
+  $('#modalRoot').innerHTML = `<div class="modal-bg" onclick="if(event.target===this)closeModal()"><div class="modal" role="dialog" aria-modal="true">${html}</div></div>`;
+  onReady && onReady();
+}
+function closeModal() { $('#modalRoot').innerHTML = ''; }
+document.addEventListener('keydown', e => { if (e.key === 'Escape') closeModal(); });
+
+function openValidate(ref) {
+  const d = DEMANDES.find(x => x.ref === ref);
+  openModal(`
+    <div class="modal-head"><h2>Valider et signer</h2><button class="icon-btn" onclick="closeModal()" aria-label="Fermer">${icon('x')}</button></div>
+    <p class="muted" style="margin:0">${d.ref} · ${esc(d.objet)} · <b style="color:var(--text)">${fcfa(d.montant)}</b></p>
+    <div class="field"><label>Signature Manager *</label>${padHtml('padManager', 'Signez ici pour valider')}<div class="field-error" id="eSigM"></div></div>
+    <div class="field"><label for="vCom">Commentaire (facultatif)</label><textarea class="input" id="vCom" rows="2" placeholder="Visible par le demandeur"></textarea></div>
+    <div class="modal-actions"><button class="btn btn-ghost" onclick="closeModal()">Annuler</button><button class="btn btn-success" onclick="confirmValidate('${ref}')">${icon('check')} Signer et valider</button></div>`,
+    () => initPad($('#padManager')));
+}
+function confirmValidate(ref) {
+  const pad = $('#padManager');
+  if (pad.isEmpty) { $('#eSigM').textContent = 'Votre signature est obligatoire pour valider.'; pad.classList.add('invalid'); return; }
+  const d = DEMANDES.find(x => x.ref === ref);
+  const now = nowIso();
+  const com = $('#vCom').value.trim();
+  Object.assign(d, { statut: 'validee', sigManager: { by: session.id, at: now, img: pad.toDataURL() }, commentaire: com });
+  d.historique.push({ at: now, by: session.id, action: 'Demande validée et signée', note: com || undefined });
+  notify(d.demandeur, ref, `Votre demande a été validée et signée par ${session.name}.`);
+  audit('Demande validée', ref);
+  closeModal();
+  toast(`Demande ${ref} validée`);
   render();
 }
 
-function submitDemande() {
-  wizStep = 0;
-  audit('Demande créée', 'FE-2026-0143');
-  toast('Demande FE-2026-0143 soumise');
-  location.hash = '#/dossiers';
+function openReject(ref) {
+  const d = DEMANDES.find(x => x.ref === ref);
+  openModal(`
+    <div class="modal-head"><h2>Rejeter la demande</h2><button class="icon-btn" onclick="closeModal()" aria-label="Fermer">${icon('x')}</button></div>
+    <p class="muted" style="margin:0">${d.ref} · ${esc(d.objet)}</p>
+    <div class="field"><label for="rCom">Motif du rejet *</label><textarea class="input" id="rCom" rows="4" placeholder="Expliquez ce qui doit être corrigé. Ce commentaire sera envoyé à ${esc(nom(d.demandeur))}."></textarea><div class="field-error" id="eRCom"></div></div>
+    <div class="modal-actions"><button class="btn btn-ghost" onclick="closeModal()">Annuler</button><button class="btn btn-danger" onclick="confirmReject('${ref}')">${icon('x')} Rejeter et notifier</button></div>`,
+    () => $('#rCom').focus());
+}
+function confirmReject(ref) {
+  const com = $('#rCom').value.trim();
+  if (com.length < 10) { $('#eRCom').textContent = 'Le commentaire est obligatoire (10 caractères minimum).'; $('#rCom').classList.add('invalid'); return; }
+  const d = DEMANDES.find(x => x.ref === ref);
+  const now = nowIso();
+  Object.assign(d, { statut: 'rejetee', commentaire: com });
+  d.historique.push({ at: now, by: session.id, action: 'Demande rejetée', note: com });
+  notify(d.demandeur, ref, `Votre demande a été rejetée par ${session.name} : « ${com.length > 70 ? com.slice(0, 70) + '…' : com} »`);
+  audit('Demande rejetée', ref);
+  closeModal();
+  toast(`Demande ${ref} rejetée · commentaire envoyé à ${nom(d.demandeur)}`);
+  render();
 }
 </script>
 </body>
