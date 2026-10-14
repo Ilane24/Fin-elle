@@ -493,23 +493,6 @@ td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; }
 .pieces-list .badge::before { display: none; }
 .pieces-list .i { width: 13px; height: 13px; }
 
-/* Bon de commande */
-.fiche-signs.three { grid-template-columns: repeat(3, minmax(0, 1fr)); }
-.fiche-signs.three .fiche-sign + .fiche-sign { border-left: 2px solid var(--text); }
-.fiche-signs.three .fiche-sign { padding-left: 16px; padding-right: 16px; }
-.fiche .bc-table { border: 0; border-radius: 0; border-bottom: 1px dashed var(--border); }
-.fiche .bc-table table { min-width: 600px; }
-.fiche .bc-table td { padding: 8px 12px; }
-.bc-table .num-in { text-align: right; max-width: 130px; margin-left: auto; display: block; }
-.bc-table td .input { padding: 7px 9px; }
-.bc-total td { background: var(--surface); font-weight: 700; text-transform: uppercase; font-size: 12.5px; letter-spacing: .03em; }
-.bc-cond { font-weight: 600; font-size: 13px; display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
-.bc-pay { width: auto; max-width: 220px; padding: 5px 8px; }
-@media (max-width: 900px) {
-  .fiche-signs.three { grid-template-columns: 1fr; }
-  .fiche-signs.three .fiche-sign + .fiche-sign { border-left: 0; border-top: 2px solid var(--text); }
-}
-
 /* Partie RAF/HF */
 .fiche-signs.single { grid-template-columns: 1fr; }
 .tranches { display: flex; flex-wrap: wrap; gap: 8px; padding-top: 4px; }
@@ -716,9 +699,6 @@ const STATUS = {
   m_dc:      ['Menue dépense · Dir. Centrale', 'b-accent'],
   m_dg:      ['Menue dépense · DG', 'b-accent'],
   m_compta:  ['Menue dépense · Comptabilité', 'b-info'],
-  bc:        ['Bon de commande · RAMG', 'b-accent'],
-  bc_cfo:    ['Bon de commande · CFO', 'b-accent'],
-  bc_four:   ['Bon de commande · Fournisseur', 'b-info'],
   validee:   ['Validée', 'b-success'],
   rejetee:   ['Rejetée', 'b-danger'],
 };
@@ -746,11 +726,12 @@ let nextCompte = 1;
 const ensureCompte = u => { if (u.menues && !u.compteMD) u.compteMD = `CMD-2026-${String(nextCompte++).padStart(3, '0')}`; };
 USERS.forEach(ensureCompte);
 const SERVICES = ['FACILITIES', 'ACHATS & MOYENS GÉNÉRAUX', 'FINANCE', 'DIRECTION', 'RESSOURCES HUMAINES', 'INFORMATIQUE', 'COMMERCIAL'];
-// Toute demande passe par la FED, puis par une fiche de menues dépenses ou un bon de commande.
-const TYPES = { menue: 'Menue dépense', bc: 'Bon de commande' };
+// Toute demande passe par la FED ; une menue dépense ajoute ensuite la fiche de menues dépenses.
+// (Le bon de commande est retiré pour le moment.)
+const TYPES = { fed: 'FED', menue: 'Menue dépense' };
 
 const seed = (ref, by, objet, proforma, montant, date, statut, extra = {}) => ({
-  ref, type: 'bc', bcInfo: { fournisseur: '', contact: '' }, bcDoc: null, sigs: {}, demandeur: by, n1: userById(by).n1, objet, proforma, montant, date, statut, description: '',
+  ref, type: 'fed', sigs: {}, demandeur: by, n1: userById(by).n1, objet, proforma, montant, date, statut, description: '',
   sigDemandeur: { by, at: date }, sigManager: null, sigRaf: null, raf: null, retourRaf: null, sigCfo: null, cfo: null, retourCfo: null, commentaire: '', pieces: proforma ? [`Proforma_${ref}.pdf`] : [],
   historique: [{ at: date, by, action: 'Fiche signée et transmise au N+1' }], ...extra,
 });
@@ -774,21 +755,13 @@ const DEMANDES = [
   seed('FED-2026-0134', 'awa.ndiaye',    'Contrat de dératisation trimestriel',         true,  980000,  '2026-10-06T16:45', 'validee', {
     sigManager: { by: 'serge.kouadio', at: '2026-10-07T09:10' }, sigRaf: { by: RAF_ID, at: '2026-10-07T15:30' },
     raf: { tranche: 2, reserve: 'Contrat à renégocier à l\'échéance.', date: '2026-10-07T15:30', proformas: [{ fournisseur: 'Hygiène Services CI', ref: 'HS-118', montant: 980000 }, { fournisseur: 'Bio-Protect', ref: 'BP-2026-44', montant: 1050000 }, { fournisseur: 'NetPro', ref: 'NP-77', montant: 1120000 }] },
-    historique: [{ at: '2026-10-06T16:45', by: 'awa.ndiaye', action: 'Fiche signée et transmise au N+1' }, { at: '2026-10-07T09:10', by: 'serge.kouadio', action: 'Validée et signée par le N+1, transmise au RAF/HF' }, { at: '2026-10-07T15:30', by: RAF_ID, action: 'Validée et signée par le RAF/HF, transmise au CFO' }, { at: '2026-10-08T10:12', by: CFO_ID, action: 'Validation (2) et signature CFO' }, { at: '2026-10-08T15:00', by: RAF_ID, action: 'Bon de commande BC-2026-0041 établi et signé par le RAMG' }, { at: '2026-10-08T17:20', by: CFO_ID, action: 'Bon de commande signé par le CFO' }, { at: '2026-10-09T10:00', by: RAF_ID, action: 'Bon de commande signé par le fournisseur (copie jointe)' }],
-    bcInfo: { fournisseur: 'Hygiène Services CI', contact: '+225 07 11 22 33 44' },
-    bcDoc: { numero: 'BC-2026-0041', date: '2026-10-08T15:00', fournisseur: 'Hygiène Services CI', adresse: 'ABIDJAN', reference: 'HS-118', tel: '+225 07 11 22 33 44', email: '',
-      lignes: [{ designation: 'Contrat de dératisation – 4e trimestre', qte: 1, pu: 980000 }], total: 980000, lettres: enLettres(980000), paiement: 'à la livraison',
-      sigRamg: { by: RAF_ID, at: '2026-10-08T15:00' }, sigCfo: { by: CFO_ID, at: '2026-10-08T17:20' }, sigFournisseur: { by: RAF_ID, at: '2026-10-09T10:00', fichier: 'BC-2026-0041_signe_fournisseur.pdf' } },
+    historique: [{ at: '2026-10-06T16:45', by: 'awa.ndiaye', action: 'Fiche signée et transmise au N+1' }, { at: '2026-10-07T09:10', by: 'serge.kouadio', action: 'Validée et signée par le N+1, transmise au RAF/HF' }, { at: '2026-10-07T15:30', by: RAF_ID, action: 'Validée et signée par le RAF/HF, transmise au CFO' }, { at: '2026-10-08T10:12', by: CFO_ID, action: 'Validation (2) et signature CFO' }],
     sigCfo: { by: CFO_ID, at: '2026-10-08T10:12' }, cfo: { proforma: 0, montant: 980000, lettres: 'Neuf cent quatre-vingt mille francs CFA', reserve: '', date: '2026-10-08T10:12' },
   }),
   seed('FED-2026-0131', 'fatou.diallo',  'Plantes et entretien de l\'accueil',          false, 150000,  '2026-10-03T10:20', 'validee', {
     sigManager: { by: 'serge.kouadio', at: '2026-10-03T15:02' }, sigRaf: { by: RAF_ID, at: '2026-10-04T10:05' },
     raf: { tranche: 2, reserve: '', date: '2026-10-04T10:05', proformas: [{ fournisseur: 'Jardin d\'Ivoire', ref: 'JI-532', montant: 150000 }, { fournisseur: '', ref: '', montant: 0 }, { fournisseur: '', ref: '', montant: 0 }] },
-    historique: [{ at: '2026-10-03T10:20', by: 'fatou.diallo', action: 'Fiche signée et transmise au N+1' }, { at: '2026-10-03T15:02', by: 'serge.kouadio', action: 'Validée et signée par le N+1, transmise au RAF/HF' }, { at: '2026-10-04T10:05', by: RAF_ID, action: 'Validée et signée par le RAF/HF, transmise au CFO' }, { at: '2026-10-04T16:40', by: CFO_ID, action: 'Validation (2) et signature CFO' }, { at: '2026-10-05T09:30', by: RAF_ID, action: 'Bon de commande BC-2026-0038 établi et signé par le RAMG' }, { at: '2026-10-05T12:10', by: CFO_ID, action: 'Bon de commande signé par le CFO' }, { at: '2026-10-06T08:45', by: RAF_ID, action: 'Bon de commande signé par le fournisseur (copie jointe)' }],
-    bcInfo: { fournisseur: 'Jardin d\'Ivoire', contact: '' },
-    bcDoc: { numero: 'BC-2026-0038', date: '2026-10-05T09:30', fournisseur: 'Jardin d\'Ivoire', adresse: 'ABIDJAN', reference: 'JI-532', tel: '', email: '',
-      lignes: [{ designation: 'Plantes d\'intérieur pour l\'accueil', qte: 6, pu: 15000 }, { designation: 'Entretien mensuel', qte: 1, pu: 60000 }], total: 150000, lettres: enLettres(150000), paiement: 'à la livraison',
-      sigRamg: { by: RAF_ID, at: '2026-10-05T09:30' }, sigCfo: { by: CFO_ID, at: '2026-10-05T12:10' }, sigFournisseur: { by: RAF_ID, at: '2026-10-06T08:45', fichier: 'BC-2026-0038_signe_fournisseur.pdf' } },
+    historique: [{ at: '2026-10-03T10:20', by: 'fatou.diallo', action: 'Fiche signée et transmise au N+1' }, { at: '2026-10-03T15:02', by: 'serge.kouadio', action: 'Validée et signée par le N+1, transmise au RAF/HF' }, { at: '2026-10-04T10:05', by: RAF_ID, action: 'Validée et signée par le RAF/HF, transmise au CFO' }, { at: '2026-10-04T16:40', by: CFO_ID, action: 'Validation (2) et signature CFO' }],
     sigCfo: { by: CFO_ID, at: '2026-10-04T16:40' }, cfo: { proforma: 0, montant: 150000, lettres: 'Cent cinquante mille francs CFA', reserve: 'Paiement à 30 jours.', date: '2026-10-04T16:40' },
   }),
 ];
@@ -843,7 +816,7 @@ function seedMenue(ref, by, objet, montant, date, statut, sigs = {}, extra = {})
     [4, RAF_ID, 'Validée et signée par le RAF/HF, transmise au CFO'], [6, CFO_ID, `Validation (2) et signature CFO · ${fcfa(montant)}`]];
   return {
     ref, type: 'menue', demandeur: by, n1, compte: userById(by).compteMD, objet, montant, date, statut,
-    proforma: false, pieces: [], description: '', commentaire: '', bcInfo: null, bcDoc: null,
+    proforma: false, pieces: [], description: '', commentaire: '',
     sigDemandeur: { by, at: date }, sigManager: { by: n1, at: t(2) }, sigRaf: { by: RAF_ID, at: t(4) }, sigCfo: { by: CFO_ID, at: t(6) },
     raf: { tranche: montant < 50000 ? 0 : montant > 100000 ? 2 : 1, reserve: '', date: t(4), proformas: [{ fournisseur: 'Achat au comptant (reçu)', ref: '—', montant }, { fournisseur: '', ref: '', montant: 0 }, { fournisseur: '', ref: '', montant: 0 }] },
     cfo: { proforma: 0, montant, lettres: enLettres(montant), reserve: '', date: t(6) },
@@ -920,7 +893,7 @@ const can = perm => !!session && [].concat(perm).some(p => ROLES[session.role].p
 
 // Personne qui doit agir sur la demande à son étape actuelle
 const MENUE_ACTOR = { raf: RAF_ID, dc: CFO_ID, dg: DG_ID, compta: COMPTA_ID };
-const actorOf = d => d.statut.startsWith('m_') ? MENUE_ACTOR[d.statut.slice(2)] : { attente: d.n1, raf: RAF_ID, cfo: CFO_ID, bc: RAF_ID, bc_cfo: CFO_ID, bc_four: RAF_ID }[d.statut];
+const actorOf = d => d.statut.startsWith('m_') ? MENUE_ACTOR[d.statut.slice(2)] : { attente: d.n1, raf: RAF_ID, cfo: CFO_ID }[d.statut];
 const menueMontant = d => d.cfo?.montant ?? d.montant;
 // Ce que chaque profil peut voir : ses demandes, celles de son équipe (N+1), celles où il intervient, tout (admin).
 const visible = () => DEMANDES.filter(d => session.role === 'admin' || d.demandeur === session.id || d.n1 === session.id
@@ -1353,7 +1326,7 @@ function viewDashboard() {
         </div>
         <div class="list" style="margin-top:18px">
           <h3 style="margin-bottom:4px">Circuit de validation</h3>
-          ${[['pen', 'Le demandeur remplit et signe la fiche'], ['inbox', 'Le N+1 valide en signant, ou rejette avec un commentaire'], ['shield', 'Le RAF/HF complète sa partie et signe, ou retourne la fiche au N+1'], ['wallet', 'Le CFO retient la proforma, fixe le montant et signe'], ['check', 'La demande est validée'], ['lock', 'Menue dépense : fiche signée par RAF/HF, Direction Centrale, DG si ≥ 150 001 FCFA, puis visée par la Comptabilité'], ['file', 'Bon de commande (05SUP03V03) : établi et signé par le RAMG, signé par le CFO, puis par le fournisseur']].map(([ic, t]) => `<div class="list-item"><div class="doc-ico">${icon(ic)}</div><div class="grow"><span style="font-size:13px;color:var(--text)">${t}</span></div></div>`).join('')}
+          ${[['pen', 'Le demandeur remplit et signe la fiche'], ['inbox', 'Le N+1 valide en signant, ou rejette avec un commentaire'], ['shield', 'Le RAF/HF complète sa partie et signe, ou retourne la fiche au N+1'], ['wallet', 'Le CFO retient la proforma, fixe le montant et signe'], ['check', 'La demande est validée'], ['lock', 'Menue dépense : fiche signée par RAF/HF, Direction Centrale, DG si ≥ 150 001 FCFA, puis visée par la Comptabilité']].map(([ic, t]) => `<div class="list-item"><div class="doc-ico">${icon(ic)}</div><div class="grow"><span style="font-size:13px;color:var(--text)">${t}</span></div></div>`).join('')}
         </div>
       </div>
     </div>`;
@@ -1361,8 +1334,8 @@ function viewDashboard() {
 
 let filtre = 'toutes', filtreType = 'tous', recherche = '';
 function viewDemandes() {
-  const filters = [['toutes', 'Tous statuts'], ['attente', 'En attente N+1'], ['raf', 'En attente RAF/HF'], ['cfo', 'En attente CFO'], ['m_raf', 'Menue dép. · RAF/HF'], ['m_dc', 'Menue dép. · Dir. Centrale'], ['m_dg', 'Menue dép. · DG'], ['m_compta', 'Menue dép. · Comptabilité'], ['bc', 'BC · RAMG'], ['bc_cfo', 'BC · CFO'], ['bc_four', 'BC · Fournisseur'], ['validee', 'Validées'], ['rejetee', 'Rejetées']];
-  const types = [['tous', 'Tous types'], ['menue', 'Menues dépenses'], ['bc', 'Bons de commande']];
+  const filters = [['toutes', 'Tous statuts'], ['attente', 'En attente N+1'], ['raf', 'En attente RAF/HF'], ['cfo', 'En attente CFO'], ['m_raf', 'Menue dép. · RAF/HF'], ['m_dc', 'Menue dép. · Dir. Centrale'], ['m_dg', 'Menue dép. · DG'], ['m_compta', 'Menue dép. · Comptabilité'], ['validee', 'Validées'], ['rejetee', 'Rejetées']];
+  const types = [['tous', 'Tous types'], ['fed', 'FED seules'], ['menue', 'Menues dépenses']];
   let list = visible();
   if (filtreType !== 'tous') list = list.filter(d => d.type === filtreType);
   if (filtre !== 'toutes') list = list.filter(d => d.statut === filtre);
@@ -1383,7 +1356,7 @@ function viewDemandes() {
 function viewAValider() {
   const list = aValider();
   return `
-    ${pageHead('À valider', ['dg', 'compta'].includes(session.role) ? 'Fiches de menues dépenses en attente de votre ' + (session.role === 'dg' ? 'signature.' : 'visa.') : session.role === 'raf' ? 'FED à valider, fiches de menues dépenses à signer, bons de commande à établir et à faire signer par le fournisseur.' : session.role === 'cfo' ? 'FED validées par le RAF/HF, fiches de menues dépenses (Direction Centrale) et bons de commande à signer.' : 'Demandes de vos collaborateurs en attente de votre signature.')}
+    ${pageHead('À valider', ['dg', 'compta'].includes(session.role) ? 'Fiches de menues dépenses en attente de votre ' + (session.role === 'dg' ? 'signature.' : 'visa.') : session.role === 'raf' ? 'FED à valider et fiches de menues dépenses à signer.' : session.role === 'cfo' ? 'FED validées par le RAF/HF et fiches de menues dépenses (Direction Centrale).' : 'Demandes de vos collaborateurs en attente de votre signature.')}
     ${demandeTable(list, `${icon('check')} Vous êtes à jour : aucune demande en attente.`)}`;
 }
 
@@ -1398,17 +1371,6 @@ function viewDemande(ref) {
   const isCfo = session.id === CFO_ID && d.statut === 'cfo';
   const isMenueActor = d.statut.startsWith('m_') && actorOf(d) === session.id;
   const isMenueCompta = isMenueActor && d.statut === 'm_compta';
-  const isBc = d.statut === 'bc' && session.id === RAF_ID;
-  const isBcCfo = d.statut === 'bc_cfo' && session.id === CFO_ID;
-  const isBcFour = d.statut === 'bc_four' && session.id === RAF_ID;
-  if (isBc) afterRender = () => {
-    initPad($('#padBc')).addEventListener('pointerdown', () => { $('#eSigBc').textContent = ''; });
-    $('#bcForm').addEventListener('input', e => {
-      e.target.classList.remove('invalid');
-      const err = e.target.closest('.fiche-cell')?.querySelector('.field-error'); if (err) err.textContent = '';
-    });
-    bcTotals();
-  };
   if (isMenueCompta) afterRender = () => {
     comptaPieces = [];
     initPad($('#padCompta')).addEventListener('pointerdown', () => { $('#eSigCompta').textContent = ''; });
@@ -1433,11 +1395,7 @@ function viewDemande(ref) {
     });
   };
   const pdfBtn = `<button class="btn btn-ghost" onclick="downloadFed('${d.ref}')" title="Télécharger la fiche dans son état actuel">${icon('download')} PDF</button>`;
-  const actions = pdfBtn + (isBc ? `
-    <button class="btn btn-primary" onclick="document.getElementById('bcForm').scrollIntoView({behavior:'smooth'})">${icon('file')} Établir le bon de commande</button>` : isBcCfo ? `
-    <button class="btn btn-ghost" onclick="openBcReturn('${d.ref}')">${icon('arrow', 'i-back')} Retourner au RAMG</button>
-    <button class="btn btn-primary" onclick="openBcCfoSign('${d.ref}')">${icon('pen')} Signer le bon de commande</button>` : isBcFour ? `
-    <button class="btn btn-primary" onclick="document.getElementById('bcFour').scrollIntoView({behavior:'smooth'})">${icon('upload')} Joindre le BC signé par le fournisseur</button>` : isMenueActor ? `
+  const actions = pdfBtn + (isMenueActor ? `
     <button class="btn btn-ghost" onclick="openMenueReject('${d.ref}')">${icon('x')} Rejeter</button>
     ${isMenueCompta
       ? `<button class="btn btn-primary" onclick="document.getElementById('comptaForm').scrollIntoView({behavior:'smooth'})">${icon('pen')} Compléter et viser</button>`
@@ -1450,13 +1408,8 @@ function viewDemande(ref) {
     <button class="btn btn-primary" onclick="openValidate('${d.ref}')">${icon('pen')} Valider et signer</button>` : '');
   let banner = '';
   if (d.statut === 'rejetee') banner = `<div class="alert alert-danger">${icon('message')}<div><b>Demande rejetée par ${esc(nom(d.rejetPar || d.n1))}</b><p>« ${esc(d.commentaire)} »</p>${isOwner ? `<a class="btn btn-ghost btn-sm" href="#/nouvelle-demande/${d.ref}">${icon('pen')} Corriger et renvoyer</a>` : ''}</div></div>`;
-  else if (d.statut === 'validee' && d.type === 'bc') banner = `<div class="alert alert-success">${icon('check')}<div><b>Demande clôturée · bon de commande ${esc(d.bcDoc.numero)} signé par le fournisseur</b><p>FED validée pour ${fcfa(d.cfo.montant)} · bon de commande de ${fcfa(d.bcDoc.total)} signé par le RAMG, le CFO et ${esc(d.bcDoc.fournisseur)} (copie reçue le ${fDate(d.bcDoc.sigFournisseur.at)}).</p></div></div>`;
+  else if (d.statut === 'validee' && d.type === 'fed') banner = `<div class="alert alert-success">${icon('check')}<div><b>FED validée pour ${fcfa(d.cfo.montant)}</b><p>Signée par ${esc(nom(d.n1))} (N+1), ${esc(nom(RAF_ID))} (RAF/HF) puis ${esc(nom(CFO_ID))} (CFO) le ${fDate(d.sigCfo.at)} à ${fTime(d.sigCfo.at)}.</p></div></div>`;
   else if (d.statut === 'validee') banner = `<div class="alert alert-success">${icon('check')}<div><b>Demande clôturée · fiche de menues dépenses visée (référence N° ${esc(d.compta.refCompta)})</b><p>FED validée pour ${fcfa(d.cfo.montant)} · fiche de menues dépenses visée par ${esc(nom(COMPTA_ID))} le ${fDate(d.sigs.compta.at)} à ${fTime(d.sigs.compta.at)}.</p></div></div>`;
-  else if (isBc && d.bcDoc?.retour) banner = `<div class="alert alert-danger">${icon('message')}<div><b>Bon de commande retourné par ${esc(nom(d.bcDoc.retour.by))} (CFO) le ${fDate(d.bcDoc.retour.at)} à ${fTime(d.bcDoc.retour.at)}</b><p>« ${esc(d.bcDoc.retour.comment)} »</p><p class="muted" style="font-size:12.5px">Le bon de commande est pré-rempli : corrigez-le et signez à nouveau.</p></div></div>`;
-  else if (isBc) banner = `<div class="alert alert-warning">${icon('file')}<div><b>FED validée : établissez le bon de commande</b><p>Complétez le bon de commande (fournisseur, lignes, conditions) en bas de page, puis signez en tant que RAMG.</p></div></div>`;
-  else if (isBcCfo) banner = `<div class="alert alert-warning">${icon('inbox')}<div><b>Le bon de commande attend votre signature</b><p>Établi et signé par ${esc(nom(RAF_ID))} (RAMG). Signez-le, ou retournez-le au RAMG avec un commentaire.</p></div></div>`;
-  else if (isBcFour) banner = `<div class="alert alert-warning">${icon('upload')}<div><b>Bon de commande signé par le CFO</b><p>Transmettez-le au fournisseur, puis joignez la copie signée par le fournisseur lui-même.</p></div></div>`;
-  else if (['bc', 'bc_cfo', 'bc_four'].includes(d.statut)) banner = `<div class="alert alert-warning">${icon('clock')}<div><b>FED validée pour ${fcfa(d.cfo.montant)} · bon de commande en cours</b><p>${d.statut === 'bc' ? `Établissement par ${esc(nom(RAF_ID))} (RAMG).` : d.statut === 'bc_cfo' ? `En attente de la signature de ${esc(nom(CFO_ID))} (CFO).` : 'En attente de la signature du fournisseur.'}</p></div></div>`;
 
   else if (isMenueCompta) banner = `<div class="alert alert-warning">${icon('inbox')}<div><b>La fiche de menues dépenses attend votre visa</b><p>Renseignez l'évolution budgétaire, la référence et les justificatifs en bas de la fiche, puis visez.</p></div></div>`;
   else if (isMenueActor) banner = `<div class="alert alert-warning">${icon('inbox')}<div><b>La fiche de menues dépenses attend votre signature</b><p>La FED est validée. Signez la fiche de menues dépenses, ou rejetez-la avec un commentaire envoyé à ${esc(nom(d.demandeur))}.</p></div></div>`;
@@ -1470,11 +1423,11 @@ function viewDemande(ref) {
   else if (isN1) banner = `<div class="alert alert-warning">${icon('inbox')}<div><b>Cette demande attend votre décision</b><p>Validez-la en signant, ou rejetez-la avec un commentaire qui sera transmis à ${esc(nom(d.demandeur))}.</p></div></div>`;
   else if (d.statut === 'attente' && d.retourRaf) banner = `<div class="alert alert-warning">${icon('clock')}<div><b>Retournée au N+1 par le RAF/HF</b><p>« ${esc(d.retourRaf.comment)} »</p></div></div>`;
   else if (d.statut === 'attente') banner = `<div class="alert alert-warning">${icon('clock')}<div><b>En attente de validation</b><p>Transmise à ${esc(nom(d.n1))} (N+1) le ${fDate(d.date)} à ${fTime(d.date)}.</p></div></div>`;
-  // Circuit complet : FED (N+1, RAF/HF, CFO) puis fiche de menues dépenses ou bon de commande
+  // Circuit complet : FED (N+1, RAF/HF, CFO), puis fiche de menues dépenses pour une menue dépense
   const flow = [['demande', 'FED signée'], ['attente', 'FED · N+1'], ['raf', 'FED · RAF/HF'], ['cfo', 'FED · CFO'],
     ...(d.type === 'menue'
       ? [['m_raf', 'MD · RAF/HF'], ['m_dc', 'MD · Dir. Centrale'], ...(menueMontant(d) >= SEUIL_DG ? [['m_dg', 'MD · Dir. Générale']] : []), ['m_compta', 'MD · Comptabilité']]
-      : [['bc', 'BC · RAMG'], ['bc_cfo', 'BC · CFO'], ['bc_four', 'BC · Fournisseur']])];
+      : [])];
   const rejIdx = d.statut === 'rejetee' ? flow.findIndex(([k]) => k === (d.rejetEtape || 'attente')) : -1;
   const cur = d.statut === 'validee' ? flow.length : d.statut === 'rejetee' ? rejIdx : flow.findIndex(([k]) => k === d.statut);
   const steps = flow.map(([k, label], i) => {
@@ -1488,7 +1441,7 @@ function viewDemande(ref) {
     ${banner}
     <div class="card"><div class="stepper">${steps}</div>${d.type === 'menue' ? `<p class="hint" style="justify-content:center;margin-top:10px">${dgNote(menueMontant(d))}</p>` : ''}</div>
     <div class="grid-2">
-      <div style="min-width:0;display:grid;gap:20px">${ficheView(d)}${showMenue ? ficheMenueView(d) : ''}${bcView(d)}</div>
+      <div style="min-width:0;display:grid;gap:20px">${ficheView(d)}${showMenue ? ficheMenueView(d) : ''}</div>
       <div class="card">
         <div class="card-head"><h2>Historique</h2></div>
         <div class="timeline">
@@ -1500,19 +1453,19 @@ function viewDemande(ref) {
 }
 
 /* Nouvelle demande (ou correction d'une demande rejetée) */
-let newType = 'bc';
+let newType = 'fed';
 function viewNouvelle(ref) {
   const me = userById(session.id);
   const src = ref ? DEMANDES.find(d => d.ref === ref && d.demandeur === session.id && d.statut === 'rejetee') : null;
   if (src) newType = src.type;
-  if (newType === 'menue' && !me.menues) newType = 'bc';
+  if (newType === 'menue' && !me.menues) newType = 'fed';
   const typeCard = `
     <div class="card type-card"><span class="type-label">Type de demande *</span>
       <div class="tranches">
-        <label class="tranche"><input type="radio" name="ftype" value="bc" ${newType === 'bc' ? 'checked' : ''} ${src ? 'disabled' : ''} onchange="newType=this.value;render()">Bon de commande</label>
+        <label class="tranche"><input type="radio" name="ftype" value="fed" ${newType === 'fed' ? 'checked' : ''} ${src ? 'disabled' : ''} onchange="newType=this.value;render()">FED seule</label>
         <label class="tranche ${me.menues ? '' : 'disabled'}" title="${me.menues ? '' : 'Nécessite un compte menues dépenses'}"><input type="radio" name="ftype" value="menue" ${newType === 'menue' ? 'checked' : ''} ${me.menues && !src ? '' : 'disabled'} onchange="newType=this.value;render()">Menue dépense${me.menues ? '' : ` ${icon('lock')}`}</label>
       </div>
-      <p class="hint">${icon('file')} Dans tous les cas, la FED ci-dessous est obligatoire : elle suit la demande jusqu'au bout.</p>
+      <p class="hint">${icon('file')} Dans tous les cas, la FED ci-dessous est obligatoire. Une menue dépense ajoute ensuite la fiche de menues dépenses.</p>
       ${me.menues ? `<p class="hint">${icon('wallet')} Compte menues dépenses n° <b>${me.compteMD}</b></p>`
         : `<p class="hint">${icon('lock')} Vous n'avez pas de compte menues dépenses : demandez son ouverture à l'administrateur pour effectuer une menue dépense.</p>`}
     </div>`;
@@ -1526,7 +1479,6 @@ function viewNouvelle(ref) {
       if (err) err.textContent = '';
       e.target.classList.remove('invalid');
     });
-    $('#bcFour')?.addEventListener('input', () => { $('#eBcFour').textContent = ''; $('#bcFour').classList.remove('invalid'); });
     menueMontantChange();
   };
   return `
@@ -1559,20 +1511,12 @@ function viewNouvelle(ref) {
         <div class="fiche-sign"><h3>Signature Manager</h3><div class="sign-box">${icon('lock')}&nbsp;Réservée au N+1${manager ? ` : ${esc(manager.nom)}` : ''}</div><div class="sign-meta">Sera complétée lors de la validation.</div></div>
       </div>
     </form>
-    ${newType === 'bc' ? `
-    <div class="card extra-card">
-      <div class="card-head"><h2>Bon de commande · fournisseur</h2>${icon('file')}</div>
-      <p class="hint" style="margin:0 0 14px">Le bon de commande s'utilise quand le prestataire ou le fournisseur est défini et connu. Il sera émis par le RAF/HF une fois la FED validée par le CFO.</p>
-      <div class="form-grid">
-        <div class="field"><label for="bcFour">Fournisseur / prestataire *</label><input class="input" id="bcFour" value="${esc(src?.bcInfo?.fournisseur ?? '')}" placeholder="Ex. Lumi Pro SARL"><div class="field-error" id="eBcFour"></div></div>
-        <div class="field"><label for="bcContact">Contact</label><input class="input" id="bcContact" value="${esc(src?.bcInfo?.contact ?? '')}" placeholder="Téléphone ou e-mail"></div>
-      </div>
-    </div>` : `
+    ${newType === 'menue' ? `
     <div class="card extra-card">
       <div class="card-head"><h2>Menue dépense</h2><span class="ref">${esc(me.compteMD)}</span></div>
       <p class="hint" style="margin:0">Une fois la FED validée par le CFO, la fiche de menues dépenses (compte ${esc(me.compteMD)}) sera signée par le RAF/HF et la Direction Centrale, puis visée par la Comptabilité.</p>
       <p class="hint" id="dgHint" style="margin:8px 0 0"></p>
-    </div>`}
+    </div>` : ''}
     <div class="form-actions">
       <a class="btn btn-ghost" href="#/demandes">Annuler</a>
       <button class="btn btn-primary" onclick="submitFiche('${src ? src.ref : ''}')" ${manager ? '' : 'disabled style="opacity:.5;pointer-events:none"'}>${icon('pen')} Signer et transmettre au N+1 ${icon('arrow', 'i-arrow')}</button>
@@ -1729,202 +1673,6 @@ function confirmMenueReject(ref) {
   render();
 }
 
-/* Bon de commande (05SUP03V03) : établi et signé par le RAMG (RAF/HF), signé par le CFO,
-   puis signé par le fournisseur lui-même (copie jointe). */
-const BC_CODE = '05SUP03V03';
-const BC_NOTE = '(*) Dépôt de la facture en 3 exemplaires (1 originale + 2 copies) + BL + BC signé par le fournisseur lui-même.';
-let bcLines = [], bcFedMontant = 0, bcFourFile = '', nextBc = 42;
-const bcTotal = lines => lines.reduce((t, l) => t + (l.qte || 0) * (l.pu || 0), 0);
-
-function bcLinesHtml() {
-  return bcLines.map((l, i) => `<tr>
-    <td>${i + 1}</td>
-    <td><input class="input" aria-label="Désignation ligne ${i + 1}" value="${esc(l.designation)}" oninput="bcLines[${i}].designation=this.value"></td>
-    <td><input class="input num-in" aria-label="Quantité ligne ${i + 1}" inputmode="numeric" value="${l.qte || ''}" oninput="bcSet(${i},'qte',this)"></td>
-    <td><input class="input num-in" aria-label="Prix unitaire ligne ${i + 1}" inputmode="numeric" value="${l.pu ? fmtNum(l.pu) : ''}" oninput="bcSet(${i},'pu',this)"></td>
-    <td class="num" id="bcM${i}">${fcfa((l.qte || 0) * (l.pu || 0))}</td>
-    <td>${bcLines.length > 1 ? `<button type="button" class="icon-btn" aria-label="Supprimer la ligne" onclick="bcRemoveLine(${i})">${icon('x')}</button>` : ''}</td>
-  </tr>`).join('');
-}
-function bcSet(i, k, el) {
-  const n = Number(el.value.replace(/\D/g, ''));
-  el.value = n ? (k === 'pu' ? fmtNum(n) : String(n)) : '';
-  bcLines[i][k] = n;
-  $('#bcM' + i).textContent = fcfa((bcLines[i].qte || 0) * (bcLines[i].pu || 0));
-  bcTotals();
-}
-function bcTotals() {
-  const t = bcTotal(bcLines);
-  $('#bcTotal').textContent = fcfa(t);
-  $('#bcLettres').textContent = t ? enLettres(t) : '—';
-  $('#bcWarn').innerHTML = t && t !== bcFedMontant ? `${icon('alert')} Le montant à payer (${fcfa(t)}) diffère du montant validé sur la FED (${fcfa(bcFedMontant)}).` : '';
-  $('#eLines').textContent = '';
-}
-function bcAddLine() { bcLines.push({ designation: '', qte: 1, pu: 0 }); $('#bcLinesBody').innerHTML = bcLinesHtml(); bcTotals(); }
-function bcRemoveLine(i) { bcLines.splice(i, 1); $('#bcLinesBody').innerHTML = bcLinesHtml(); bcTotals(); }
-
-function bcView(d) {
-  if (d.type !== 'bc' || !['bc', 'bc_cfo', 'bc_four', 'validee'].includes(d.statut)) return '';
-  const editable = d.statut === 'bc' && session.id === RAF_ID;
-  const b = d.bcDoc;
-  const numero = b?.numero || `BC-2026-${String(nextBc).padStart(4, '0')}`;
-  const head = `<div class="fiche-head"><span class="fiche-code">${BC_CODE}</span><span class="fiche-title">Bon de commande</span><span class="ref">${numero}</span></div>`;
-  const conditions = paiement => `
-      <div class="fiche-cell full"><span>Conditions</span>
-        <div class="bc-cond">– Paiement de ${paiement} 100 %</div>
-        <div class="bc-cond">– Mode de paiement : par chèque (APSFD-CI)</div></div>
-      <p class="fiche-note">${BC_NOTE}</p>`;
-  const sigCell = (title, sig, waiting) => `<div class="fiche-sign"><h3>${title}</h3>${signatureBlock(sig, waiting)}</div>`;
-  if (!editable) {
-    if (!b) return `<div class="fiche">${head}<div class="fiche-cell"><span>Statut</span><b>À établir par ${esc(nom(RAF_ID))} (RAMG)</b></div></div>`;
-    const four = b.sigFournisseur
-      ? `<div class="fiche-sign"><h3>Fournisseur</h3><div class="sign-box">${icon('file')}&nbsp;${esc(b.sigFournisseur.fichier)}</div><div class="sign-meta">Copie signée jointe par ${esc(nom(b.sigFournisseur.by))} · ${fDate(b.sigFournisseur.at)}</div></div>`
-      : session.id === RAF_ID && d.statut === 'bc_four'
-        ? `<div class="fiche-sign" id="bcFour"><h3>Fournisseur</h3>
-            <div class="upload" style="padding:14px" onclick="bcAttachFour('${d.ref}', this)">${icon('upload')}<div><b>Joindre le BC signé par le fournisseur</b><div style="font-size:12px">PDF, JPG ou PNG</div></div></div>
-            <div class="field-error" id="eFour"></div>
-            <button class="btn btn-success" style="justify-content:center" onclick="bcConfirmFour('${d.ref}')">${icon('check')} Confirmer la signature du fournisseur</button></div>`
-        : sigCell('Fournisseur', null, 'En attente');
-    return `<div class="fiche">${head}
-      <div class="fiche-grid">
-        <div class="fiche-cell"><span>Date</span><b>${fDate(b.date)}</b></div>
-        <div class="fiche-cell"><span>N°</span><b>${b.numero}</b></div>
-        <div class="fiche-cell full"><span>Nom fournisseur</span><b>${esc(b.fournisseur)}</b></div>
-        <div class="fiche-cell full"><span>Adresse</span><b>${esc(b.adresse) || '—'}</b></div>
-        <div class="fiche-cell full"><span>Référence</span><b>${esc(b.reference) || '—'}</b></div>
-        <div class="fiche-cell"><span>Téléphone</span><b>${esc(b.tel) || '—'}</b></div>
-        <div class="fiche-cell"><span>Email</span><b>${esc(b.email) || '—'}</b></div>
-      </div>
-      <div class="table-wrap bc-table"><table>
-        <thead><tr><th>N°</th><th>Désignation</th><th class="num">Quantité</th><th class="num">Prix unitaire</th><th class="num">Montant</th></tr></thead>
-        <tbody>${b.lignes.map((l, i) => `<tr><td>${i + 1}</td><td>${esc(l.designation)}</td><td class="num">${l.qte}</td><td class="num">${fcfa(l.pu)}</td><td class="num">${fcfa(l.qte * l.pu)}</td></tr>`).join('')}
-          <tr class="bc-total"><td colspan="4">Montant à payer</td><td class="num">${fcfa(b.total)}</td></tr></tbody></table></div>
-      <div class="fiche-cell full"><span>Montant HT en lettres</span><b>${esc(b.lettres)}</b></div>
-      ${conditions(esc(b.paiement))}
-      <div class="fiche-signs three">
-        ${sigCell('RAMG', b.sigRamg, '—')}
-        ${sigCell('CFO', b.sigCfo, `${icon('clock')}&nbsp;En attente de ${esc(nom(CFO_ID))}`)}
-        ${four}
-      </div></div>`;
-  }
-  // Formulaire du RAMG, pré-rempli depuis la FED (ou depuis le BC retourné par le CFO)
-  const pf = d.raf?.proformas[d.cfo?.proforma];
-  bcFedMontant = d.cfo.montant;
-  bcLines = b ? b.lignes.map(l => ({ ...l })) : [{ designation: d.objet, qte: 1, pu: d.cfo.montant }, { designation: '', qte: 0, pu: 0 }];
-  return `<div class="fiche" id="bcForm">${head}
-    <div class="fiche-grid">
-      <div class="fiche-cell"><span>Date</span><b>${fDate(new Date())}</b></div>
-      <div class="fiche-cell"><span>N°</span><b>${numero}</b></div>
-      <div class="fiche-cell full"><label for="bcF">Nom fournisseur *</label><input class="input" id="bcF" value="${esc(b?.fournisseur || d.bcInfo?.fournisseur || pf?.fournisseur || '')}"><div class="field-error"></div></div>
-      <div class="fiche-cell full"><label for="bcA">Adresse</label><input class="input" id="bcA" value="${esc(b?.adresse ?? 'ABIDJAN')}"></div>
-      <div class="fiche-cell full"><label for="bcR">Référence</label><input class="input" id="bcR" value="${esc(b?.reference ?? pf?.ref ?? '')}" placeholder="Réf. de la proforma ou du devis"></div>
-      <div class="fiche-cell"><label for="bcT">Téléphone</label><input class="input" id="bcT" inputmode="tel" value="${esc(b?.tel ?? d.bcInfo?.contact ?? '')}" placeholder="+225 00 00 00 00 00"></div>
-      <div class="fiche-cell"><label for="bcE">Email</label><input class="input" id="bcE" type="email" value="${esc(b?.email ?? '')}" placeholder="contact@fournisseur.ci"></div>
-    </div>
-    <div class="table-wrap bc-table"><table>
-      <thead><tr><th>N°</th><th>Désignation</th><th class="num">Quantité</th><th class="num">Prix unitaire</th><th class="num">Montant</th><th></th></tr></thead>
-      <tbody id="bcLinesBody">${bcLinesHtml()}</tbody>
-      <tfoot><tr class="bc-total"><td colspan="4">Montant à payer</td><td class="num" id="bcTotal"></td><td></td></tr></tfoot></table></div>
-    <div class="fiche-cell full"><button type="button" class="link-btn" onclick="bcAddLine()">+ Ajouter une ligne</button><div class="field-error" id="eLines"></div><p class="hint hint-warn" id="bcWarn" style="margin:0"></p></div>
-    <div class="fiche-cell full"><span>Montant HT en lettres</span><b id="bcLettres">—</b></div>
-    <div class="fiche-cell full"><label for="bcP">Conditions</label>
-      <div class="bc-cond">– Paiement de <input class="input bc-pay" id="bcP" value="${esc(b?.paiement ?? 'à la livraison')}" aria-label="Modalité de paiement"> 100 %</div>
-      <div class="bc-cond">– Mode de paiement : par chèque (APSFD-CI)</div></div>
-    <p class="fiche-note">${BC_NOTE}</p>
-    <div class="fiche-signs three">
-      <div class="fiche-sign"><h3>RAMG *</h3>${padHtml('padBc', 'Signez ici')}<div class="field-error" id="eSigBc"></div></div>
-      ${sigCell('CFO', null, `${icon('lock')}&nbsp;Après votre signature`)}
-      ${sigCell('Fournisseur', null, `${icon('lock')}&nbsp;Après le CFO`)}
-    </div>
-    <div class="form-actions" style="padding:0 24px 20px;justify-content:flex-end"><button class="btn btn-success" onclick="submitBc('${d.ref}')">${icon('check')} Signer et transmettre au CFO</button></div>
-  </div>`;
-}
-
-function submitBc(ref) {
-  const d = DEMANDES.find(x => x.ref === ref);
-  const four = $('#bcF').value.trim(), sigPad = $('#padBc');
-  const lignes = bcLines.filter(l => l.designation.trim() || l.pu);
-  let ok = true;
-  $('#bcF').closest('.fiche-cell').querySelector('.field-error').textContent = four ? '' : 'Saisissez le nom du fournisseur.'; $('#bcF').classList.toggle('invalid', !four); if (!four) ok = false;
-  const linesOk = lignes.length && lignes.every(l => l.designation.trim() && l.qte > 0 && l.pu > 0);
-  $('#eLines').textContent = linesOk ? '' : 'Chaque ligne doit avoir une désignation, une quantité et un prix unitaire.'; if (!linesOk) ok = false;
-  $('#eSigBc').textContent = sigPad.isEmpty ? 'Votre signature est obligatoire.' : ''; if (sigPad.isEmpty) { ok = false; sigPad.classList.add('invalid'); }
-  if (!ok) { toast('Complétez les champs signalés'); return; }
-  const now = nowIso(), total = bcTotal(lignes);
-  const numero = d.bcDoc?.numero || `BC-2026-${String(nextBc++).padStart(4, '0')}`;
-  d.bcDoc = { numero, date: now, fournisseur: four, adresse: $('#bcA').value.trim(), reference: $('#bcR').value.trim(), tel: $('#bcT').value.trim(), email: $('#bcE').value.trim(),
-    lignes: lignes.map(l => ({ designation: l.designation.trim(), qte: l.qte, pu: l.pu })), total, lettres: enLettres(total), paiement: $('#bcP').value.trim() || 'à la livraison',
-    sigRamg: { by: session.id, at: now, img: sigPad.toDataURL() }, sigCfo: null, sigFournisseur: null, retour: null };
-  d.statut = 'bc_cfo';
-  d.historique.push({ at: now, by: session.id, action: `Bon de commande ${numero} établi et signé par le RAMG · ${fcfa(total)}` });
-  notify(CFO_ID, ref, `Le bon de commande ${numero} (${four}, ${fcfa(total)}) attend votre signature.`);
-  audit('Bon de commande établi (RAMG)', ref);
-  toast(`Bon de commande ${numero} transmis à ${nom(CFO_ID)} (CFO)`);
-  render();
-}
-
-function openBcCfoSign(ref) {
-  const d = DEMANDES.find(x => x.ref === ref);
-  openModal(`
-    <div class="modal-head"><h2>Signer le bon de commande</h2><button class="icon-btn" onclick="closeModal()" aria-label="Fermer">${icon('x')}</button></div>
-    <p class="muted" style="margin:0">${d.bcDoc.numero} · ${esc(d.bcDoc.fournisseur)} · <b style="color:var(--text)">${fcfa(d.bcDoc.total)}</b></p>
-    <div class="field"><label>Signature CFO *</label>${padHtml('padBcCfo', 'Signez ici')}<div class="field-error" id="eSigBcCfo"></div></div>
-    <div class="modal-actions"><button class="btn btn-ghost" onclick="closeModal()">Annuler</button><button class="btn btn-success" onclick="confirmBcCfoSign('${ref}')">${icon('check')} Signer</button></div>`,
-    () => initPad($('#padBcCfo')));
-}
-function confirmBcCfoSign(ref) {
-  const sigPad = $('#padBcCfo');
-  if (sigPad.isEmpty) { $('#eSigBcCfo').textContent = 'Votre signature est obligatoire.'; sigPad.classList.add('invalid'); return; }
-  const d = DEMANDES.find(x => x.ref === ref), now = nowIso();
-  d.bcDoc.sigCfo = { by: session.id, at: now, img: sigPad.toDataURL() };
-  d.statut = 'bc_four';
-  d.historique.push({ at: now, by: session.id, action: 'Bon de commande signé par le CFO' });
-  notify(RAF_ID, ref, `Le bon de commande ${d.bcDoc.numero} est signé par le CFO : transmettez-le au fournisseur.`);
-  notify(d.demandeur, ref, `Le bon de commande ${d.bcDoc.numero} est signé : il part chez le fournisseur ${d.bcDoc.fournisseur}.`);
-  audit('Bon de commande signé (CFO)', ref);
-  closeModal(); toast(`Bon de commande ${d.bcDoc.numero} signé`); render();
-}
-function openBcReturn(ref) {
-  const d = DEMANDES.find(x => x.ref === ref);
-  openModal(`
-    <div class="modal-head"><h2>Retourner au RAMG</h2><button class="icon-btn" onclick="closeModal()" aria-label="Fermer">${icon('x')}</button></div>
-    <p class="muted" style="margin:0">${d.bcDoc.numero} · ${esc(d.bcDoc.fournisseur)}</p>
-    <div class="field"><label for="bcRetCom">Ce qui doit être corrigé *</label><textarea class="input" id="bcRetCom" rows="4" placeholder="Ex. Le prix unitaire ne correspond pas à la proforma retenue."></textarea><div class="field-error" id="eBcRet"></div></div>
-    <div class="modal-actions"><button class="btn btn-ghost" onclick="closeModal()">Annuler</button><button class="btn btn-danger" onclick="confirmBcReturn('${ref}')">${icon('arrow', 'i-back')} Retourner et notifier</button></div>`,
-    () => $('#bcRetCom').focus());
-}
-function confirmBcReturn(ref) {
-  const com = $('#bcRetCom').value.trim();
-  if (com.length < 10) { $('#eBcRet').textContent = 'Le commentaire est obligatoire (10 caractères minimum).'; $('#bcRetCom').classList.add('invalid'); return; }
-  const d = DEMANDES.find(x => x.ref === ref), now = nowIso();
-  Object.assign(d.bcDoc, { sigRamg: null, retour: { by: session.id, at: now, comment: com } });
-  d.statut = 'bc';
-  d.historique.push({ at: now, by: session.id, action: 'Bon de commande retourné au RAMG par le CFO', note: com });
-  notify(RAF_ID, ref, `${session.name} (CFO) vous a retourné le bon de commande ${d.bcDoc.numero} : « ${com.length > 70 ? com.slice(0, 70) + '…' : com} »`);
-  audit('Bon de commande retourné au RAMG', ref);
-  closeModal(); toast(`Bon de commande retourné à ${nom(RAF_ID)}`); render();
-}
-function bcAttachFour(ref, el) {
-  const d = DEMANDES.find(x => x.ref === ref);
-  bcFourFile = `${d.bcDoc.numero}_signe_fournisseur.pdf`;
-  el.innerHTML = `${icon('file')}<div><b>${bcFourFile}</b> · 284 Ko</div>`;
-  $('#eFour').textContent = '';
-  toast('Copie signée jointe (démo)');
-}
-function bcConfirmFour(ref) {
-  const d = DEMANDES.find(x => x.ref === ref);
-  if (!bcFourFile) { $('#eFour').textContent = 'Joignez la copie du bon de commande signée par le fournisseur.'; return; }
-  const now = nowIso();
-  d.bcDoc.sigFournisseur = { by: session.id, at: now, fichier: bcFourFile };
-  bcFourFile = '';
-  d.statut = 'validee';
-  d.historique.push({ at: now, by: session.id, action: 'Bon de commande signé par le fournisseur (copie jointe)' });
-  [d.demandeur, d.n1, CFO_ID].forEach(to => notify(to, ref, `Le bon de commande ${d.bcDoc.numero} est signé par le fournisseur ${d.bcDoc.fournisseur} : demande clôturée.`));
-  audit('Bon de commande signé par le fournisseur', ref);
-  toast(`Bon de commande ${d.bcDoc.numero} signé par le fournisseur`);
-  render();
-}
-
 let comptaPieces = [];
 function addJustif(ref) {
   const n = comptaPieces.length + 1;
@@ -2026,10 +1774,8 @@ function submitFiche(resubmitRef) {
   const type = newType;
   const me0 = userById(session.id);
   if (type === 'menue' && !me0.menues) { toast('Une menue dépense nécessite un compte menues dépenses.'); return; } // refait côté serveur dans l'appli réelle
-  const bcInfo = type === 'bc' ? { fournisseur: $('#bcFour').value.trim(), contact: $('#bcContact').value.trim() } : null;
   let ok = true;
   const setErr = (id, msg, el) => { $(id).textContent = msg; if (el) el.classList.toggle('invalid', !!msg); if (msg) ok = false; };
-  if (type === 'bc') setErr('#eBcFour', bcInfo.fournisseur ? '' : 'Le bon de commande exige un fournisseur ou prestataire connu.', $('#bcFour'));
   setErr('#eObjet', objet.length < 5 ? "Décrivez l'objet de la dépense (5 caractères minimum)." : '', $('#fObjet'));
   setErr('#eProforma', pf ? '' : 'Indiquez si une pro-forma est jointe.');
   setErr('#eMontant', montant > 0 ? '' : 'Saisissez le montant estimé en FCFA.', $('#fMontant'));
@@ -2044,18 +1790,18 @@ function submitFiche(resubmitRef) {
   let d;
   if (resubmitRef) {
     d = DEMANDES.find(x => x.ref === resubmitRef);
-    Object.assign(d, { type, bcInfo, bcDoc: null, sigs: {}, compta: null, rejetPar: null, rejetEtape: null, compte: me.compteMD, objet, proforma: pf.value === 'oui', montant, description: $('#fDesc').value.trim(), date: now, statut: 'attente', sigDemandeur: sig, sigManager: null, sigRaf: null, raf: null, retourRaf: null, sigCfo: null, cfo: null, retourCfo: null, commentaire: '', pieces });
+    Object.assign(d, { type, sigs: {}, compta: null, rejetPar: null, rejetEtape: null, compte: me.compteMD, objet, proforma: pf.value === 'oui', montant, description: $('#fDesc').value.trim(), date: now, statut: 'attente', sigDemandeur: sig, sigManager: null, sigRaf: null, raf: null, retourRaf: null, sigCfo: null, cfo: null, retourCfo: null, commentaire: '', pieces });
     d.historique.push({ at: now, by: session.id, action: 'Fiche corrigée, signée et renvoyée au N+1' });
   } else {
     const ref = `FED-2026-${String(nextRef++).padStart(4, '0')}`;
-    d = { ref, type, bcInfo, bcDoc: null, sigs: {}, compta: null, compte: me.compteMD, demandeur: session.id, n1: me.n1, objet, proforma: pf.value === 'oui', montant, description: $('#fDesc').value.trim(), date: now, statut: 'attente',
+    d = { ref, type, sigs: {}, compta: null, compte: me.compteMD, demandeur: session.id, n1: me.n1, objet, proforma: pf.value === 'oui', montant, description: $('#fDesc').value.trim(), date: now, statut: 'attente',
           sigDemandeur: sig, sigManager: null, sigRaf: null, raf: null, retourRaf: null, sigCfo: null, cfo: null, retourCfo: null, commentaire: '', pieces: pieces.map(p => p.replace('jointe', ref)), historique: [{ at: now, by: session.id, action: 'Fiche signée et transmise au N+1' }] };
     DEMANDES.unshift(d);
   }
   notify(d.n1, d.ref, `${me.nom} vous a transmis une demande à valider${resubmitRef ? ' (version corrigée)' : ''}.`);
   audit(resubmitRef ? 'Demande corrigée et renvoyée' : 'Demande signée et transmise', d.ref);
   toast(`Demande ${d.ref} transmise à ${nom(d.n1)}`);
-  newType = 'bc';
+  newType = 'fed';
   location.hash = '#/demande/' + d.ref;
 }
 
@@ -2191,13 +1937,13 @@ function submitCfo(ref) {
   if (!ok) { toast('Complétez les champs signalés'); return; }
   const now = nowIso();
   const menue = d.type === 'menue';
-  Object.assign(d, { statut: menue ? 'm_raf' : 'bc', sigCfo: { by: session.id, at: now, img: sigPad.toDataURL() },
+  Object.assign(d, { statut: menue ? 'm_raf' : 'validee', sigCfo: { by: session.id, at: now, img: sigPad.toDataURL() },
     cfo: { proforma: Number(pf), montant, lettres, reserve: $('#cfoReserve').value.trim(), date: now } });
   d.historique.push({ at: now, by: session.id, action: `Validation (2) et signature CFO · ${fcfa(montant)}`, note: d.cfo.reserve ? `Réserve : ${d.cfo.reserve}` : undefined });
-  [d.demandeur, d.n1].forEach(to => notify(to, ref, `La FED ${ref} a été validée par ${session.name} (CFO) pour ${fcfa(montant)}.`));
-  notify(RAF_ID, ref, menue ? `FED ${ref} validée : la fiche de menues dépenses attend votre signature.` : `FED ${ref} validée : le bon de commande est à émettre.`);
+  [d.demandeur, d.n1, ...(menue ? [] : [RAF_ID])].forEach(to => notify(to, ref, `La FED ${ref} a été validée par ${session.name} (CFO) pour ${fcfa(montant)}.`));
+  if (menue) notify(RAF_ID, ref, `FED ${ref} validée : la fiche de menues dépenses attend votre signature.`);
   audit('Validation (2) CFO', ref);
-  toast(`FED ${ref} validée · ${menue ? 'fiche de menues dépenses transmise au RAF/HF' : 'bon de commande à émettre par le RAF/HF'}`);
+  toast(`FED ${ref} validée${menue ? ' · fiche de menues dépenses transmise au RAF/HF' : ''}`);
   render();
 }
 
@@ -2316,10 +2062,7 @@ function buildFedPdf(d) {
       const x = M + i * bw;
       if (i) doc.line(x, y, x, y + h);
       doc.setFont('helvetica', 'bold'); doc.setFontSize(8.5); doc.setTextColor(...TEXT); doc.text(title, x + bw / 2, y + 5, { align: 'center' });
-      if (sig?.text) {
-        doc.setFont('helvetica', 'normal'); doc.setFontSize(8); doc.setTextColor(...TEXT);
-        doc.text(doc.splitTextToSize(sig.text, bw - 8), x + bw / 2, y + h / 2, { align: 'center' });
-      } else if (sig) {
+      if (sig) {
         const img = sig.img || sigFromName(sig.by);
         const pr = doc.getImageProperties(img);
         const maxW = Math.min(bw - 16, 60), maxH = 18;
@@ -2434,45 +2177,6 @@ function buildFedPdf(d) {
     header(MENUE_CODE, 'FICHE DE MENUES DÉPENSES', d.ref);
     menueBody();
   }
-  if (d.bcDoc) {
-    const b = d.bcDoc;
-    doc.addPage(); y = 14;
-    header(BC_CODE, 'BON DE COMMANDE', b.numero);
-    row([['Date', fDate(b.date)], ['N°', b.numero]]);
-    row([['Nom fournisseur', b.fournisseur]]);
-    row([['Adresse', b.adresse]]);
-    row([['Référence', b.reference]]);
-    row([['Téléphone', b.tel], ['Email', b.email]]);
-    // Tableau des lignes
-    y += 3;
-    const cols = [12, CW - 12 - 24 - 34 - 36, 24, 34, 36];
-    const cell = (vals, bold, fill) => {
-      const lines = doc.splitTextToSize(String(vals[1]), cols[1] - 4);
-      const h = Math.max(7, lines.length * 4 + 3); room(h);
-      if (fill) { doc.setFillColor(243, 244, 246); doc.rect(M, y, CW, h, 'F'); }
-      doc.setDrawColor(...LINE); doc.setLineWidth(0.2); doc.rect(M, y, CW, h);
-      let x = M;
-      doc.setFont('helvetica', bold ? 'bold' : 'normal'); doc.setFontSize(8.5); doc.setTextColor(...TEXT);
-      vals.forEach((v, i) => {
-        if (i) doc.line(x, y, x, y + h);
-        const txt = i === 1 ? lines : String(v);
-        if (i >= 2) doc.text(txt, x + cols[i] - 2, y + 4.8, { align: 'right' }); else doc.text(txt, x + 2, y + 4.8);
-        x += cols[i];
-      });
-      y += h;
-    };
-    cell(['N°', 'Désignation', 'Quantité', 'Prix unitaire', 'Montant'], true, true);
-    b.lignes.forEach((l, i) => cell([i + 1, l.designation, l.qte, fcfa(l.pu), fcfa(l.qte * l.pu)]));
-    room(8); doc.setFillColor(243, 244, 246); doc.rect(M, y, CW, 7, 'F'); doc.setDrawColor(...LINE); doc.rect(M, y, CW, 7);
-    doc.setFont('helvetica', 'bold'); doc.setFontSize(9); doc.text('MONTANT À PAYER', M + (CW - 36) / 2, y + 4.8, { align: 'center' });
-    doc.text(fcfa(b.total), M + CW - 2, y + 4.8, { align: 'right' }); y += 10;
-    row([['Montant HT en lettres', b.lettres]]);
-    row([['Conditions', `– Paiement de ${b.paiement} 100 %   – Mode de paiement : par chèque (APSFD-CI)`]]);
-    note(BC_NOTE);
-    signs([['RAMG', b.sigRamg, '—'], ['CFO', b.sigCfo, 'En attente'],
-      ['Fournisseur', b.sigFournisseur ? { text: `Copie signée jointe le ${fDate(b.sigFournisseur.at)} (${b.sigFournisseur.fichier})` } : null, 'En attente']]);
-  }
-
   // Historique
   room(14); y += 2;
   doc.setFont('helvetica', 'bold'); doc.setFontSize(10); doc.setTextColor(...TEXT); doc.text('Historique', M, y + 4); y += 7;

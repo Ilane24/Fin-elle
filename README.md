@@ -12,13 +12,13 @@ Sur chaque demande, le bouton **PDF** télécharge la FED dans son état actuel 
 
 ## Circuit
 Toute demande passe **obligatoirement par la FED** (fiche d'engagement de dépenses, 05SUP02V03). En « Nouvelle demande », le demandeur choisit le **type de demande** :
-- **Bon de commande** : quand le prestataire ou fournisseur est défini et connu (fournisseur obligatoire) ;
-- **Menue dépense** : uniquement avec un compte menues dépenses.
+- **FED seule** : la demande est clôturée quand le CFO valide la FED ;
+- **Menue dépense** (uniquement avec un compte menues dépenses) : la FED est suivie de la fiche de menues dépenses.
+
+Le **bon de commande** (05SUP03V03) est retiré de l'application pour le moment ; sa dernière version est dans l'historique Git (commit « Bon de commande au format 05SUP03V03… »).
 
 1. **FED** : le demandeur remplit et signe → **N+1** (valide en signant ou rejette avec commentaire) → **RAF/HF** (montant achat, proformas, réserve, signature, ou retour au N+1) → **CFO** (proforma retenue, montant en chiffre et en lettre, réserve, signature, ou retour au RAF/HF).
-2. Puis, selon le type :
-   - **Menue dépense** : fiche de menues dépenses (Version 01) signée par le **RAF/HF**, la **Direction Centrale**, la **Direction Générale si le montant est ≥ 150 001 FCFA**, puis visée par la **Comptabilité** (référence N°, évolution budgétaire, imputation, désignation, pièces justificatives, visa). Chaque signataire peut rejeter avec un commentaire.
-   - **Bon de commande** (formulaire **05SUP03V03**) : établi par le **RAMG** (RAF/HF) — date, N°, fournisseur, adresse, référence, téléphone, email, lignes (désignation, quantité, prix unitaire, montant), montant à payer, montant HT en lettres (automatique), conditions de paiement (chèque APSFD-CI) — et signé par lui ; puis signé par le **CFO** (ou retourné au RAMG avec commentaire) ; enfin la copie **signée par le fournisseur** est jointe, ce qui clôture la demande. Un avertissement s'affiche si le montant à payer diffère du montant validé sur la FED.
+2. Pour une **menue dépense** : fiche de menues dépenses (Version 01) signée par le **RAF/HF**, la **Direction Centrale**, la **Direction Générale si le montant est ≥ 150 001 FCFA**, puis visée par la **Comptabilité** (référence N°, évolution budgétaire, imputation, désignation, pièces justificatives, visa). Chaque signataire peut rejeter avec un commentaire.
 3. Chaque décision est notifiée et tracée (historique de la demande et journal d'audit).
 
 Profils de démonstration (sélecteur « Profil (démo) ») : Fatou Diallo (demandeur, compte menues dépenses), Awa Ndiaye (demandeur sans compte), Serge Kouadio (N+1), Carine Toro (RAF/HF), Régis Kouamé (CFO / Direction Centrale), Mariam Yenita Bamba (DG), Paul Yao (Comptabilité), Mireille Gbagbo (administratrice).
