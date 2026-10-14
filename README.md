@@ -24,8 +24,9 @@ Toute demande passe **obligatoirement par la FED** (fiche d'engagement de dépen
 Profils de démonstration (sélecteur « Profil (démo) ») : Fatou Diallo (demandeur, compte menues dépenses), Awa Ndiaye (demandeur sans compte), Serge Kouadio (N+1), Carine Toro (RAF/HF), Régis Kouamé (CFO / Direction Centrale), Mariam Yenita Bamba (DG), Paul Yao (Comptabilité), Mireille Gbagbo (administratrice).
 
 ## Charte
-- Fond blanc, cartes gris clair, texte gris foncé, rose en accent (boutons, étape active, badges).
-- Rose indicatif `#D6336C` : toutes les couleurs sont des variables CSS (`:root`), à remplacer par la charte officielle Fin'Elle/Cofina.
+- Charte officielle Fin'Elle (filiale du Groupe Cofina) : **rouge #DC092F** et **gris #646363** du logo, fond blanc, cartes gris clair.
+- Logo officiel en haut à gauche et dans l'en-tête des PDF (`maquette/assets/`, extrait de la fiche de menues dépenses).
+- Toutes les couleurs sont des variables CSS (`:root`) ; un rouge plus sombre est réservé aux rejets et erreurs pour ne pas se confondre avec la marque.
 - Micro-animations au survol (150–200 ms), désactivées si l'utilisateur a choisi « réduire les animations ».
 
 ## Écrans
