@@ -184,6 +184,7 @@ svg.i { width: 18px; height: 18px; stroke: currentColor; fill: none; stroke-widt
 .menu-toggle { display: none; }
 
 .content { padding: 28px; display: grid; gap: 24px; max-width: 1280px; width: 100%; animation: fade .3s var(--ease) both; }
+.content > * { min-width: 0; }
 .page-head { display: flex; align-items: flex-end; justify-content: space-between; gap: 16px; flex-wrap: wrap; }
 .page-head p { margin: 4px 0 0; }
 .crumbs { font-size: 12.5px; color: var(--text-muted); margin-bottom: 6px; display: flex; gap: 6px; align-items: center; }
@@ -440,7 +441,27 @@ td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; }
 .demo-acc .avatar { width: 28px; height: 28px; font-size: 11px; }
 .demo-acc span { font-size: 12px; color: var(--text-muted); display: block; }
 
+/* Partie RAF/HF */
+.fiche-signs.single { grid-template-columns: 1fr; }
+.tranches { display: flex; flex-wrap: wrap; gap: 8px; padding-top: 4px; }
+.tranche {
+  display: inline-flex; align-items: center; gap: 6px; padding: 6px 12px; border-radius: 999px; border: 1px solid var(--border);
+  background: var(--bg); font-size: 13px; font-weight: 500; cursor: pointer;
+  transition: border-color var(--t) var(--ease), background var(--t) var(--ease), color var(--t) var(--ease);
+}
+label.tranche:hover { border-color: var(--accent); color: var(--accent); }
+.tranche input { accent-color: var(--accent); margin: 0; }
+.tranche:has(input:checked), .tranche.on { border-color: var(--accent); background: var(--accent-soft); color: var(--accent); font-weight: 600; }
+.tranche .i { width: 14px; height: 14px; stroke-width: 2.6; }
+.pf-row { display: grid; grid-template-columns: 1.3fr 1fr 1fr; gap: 12px; }
+.pf-row > div { display: grid; gap: 4px; min-width: 0; }
+.pf-row span, .pf-row label, .fiche-cell > label { font-size: 12px; color: var(--text-muted); font-weight: 600; }
+.pf-row b { font-weight: 600; overflow-wrap: anywhere; }
+.i-back { transform: rotate(180deg); }
+.btn:hover .i-back { transform: rotate(180deg) translateX(3px); }
+
 @media (max-width: 900px) {
+  .pf-row { grid-template-columns: 1fr; gap: 8px; }
   .fiche-grid, .fiche-signs { grid-template-columns: 1fr; }
   .fiche-cell:nth-child(odd) { border-right: 0; }
   .fiche-sign + .fiche-sign { border-left: 0; border-top: 2px solid var(--text); }
@@ -557,15 +578,22 @@ const FORM_CODE = '05SUP02V03';
 const ROLES = {
   demandeur: { label: 'Demandeur',      perms: ['dashboard', 'demandes', 'nouveau'] },
   manager:   { label: 'Manager (N+1)',  perms: ['dashboard', 'demandes', 'nouveau', 'valider'] },
+  raf:       { label: 'RAF/HF',         perms: ['dashboard', 'demandes', 'raf'] },
   admin:     { label: 'Administrateur', perms: ['dashboard', 'demandes', 'nouveau', 'valider', 'utilisateurs', 'audit'] },
 };
 const PERM_LABELS = {
   dashboard: 'Tableau de bord', demandes: 'Consulter ses demandes', nouveau: 'Créer une demande',
-  valider: 'Valider / rejeter (N+1)', utilisateurs: 'Gérer les utilisateurs', audit: "Journal d'audit",
+  valider: 'Valider / rejeter (N+1)', raf: 'Validation finale (RAF/HF)', utilisateurs: 'Gérer les utilisateurs', audit: "Journal d'audit",
 };
+// Responsable Achats et Moyens Généraux : dernière validation du circuit.
+const RAF_ID = 'carine.toro';
+const TRANCHES = ['< 50 000', '50 000 à 100 000', '100 000 à 1 500 000', '> 1 500 000'];
+const trancheFor = m => m < 50000 ? 0 : m <= 100000 ? 1 : m <= 1500000 ? 2 : 3;
+
 const STATUS = {
   brouillon: ['Brouillon', 'b-neutral'],
   attente:   ['En attente N+1', 'b-warning'],
+  raf:       ['En attente RAF/HF', 'b-info'],
   validee:   ['Validée', 'b-success'],
   rejetee:   ['Rejetée', 'b-danger'],
 };
@@ -578,6 +606,7 @@ const USERS = [
   { id: 'awa.ndiaye',      nom: 'Awa Ndiaye',      fonction: 'Technicienne maintenance',  service: 'FACILITIES', role: 'demandeur', n1: 'serge.kouadio',   actif: true,  derniere: '2026-10-13T17:40' },
   { id: 'ibrahim.toure',   nom: 'Ibrahim Touré',   fonction: 'Chef de la sécurité',       service: 'FACILITIES', role: 'demandeur', n1: 'serge.kouadio',   actif: true,  derniere: '2026-10-14T09:03' },
   { id: 'serge.kouadio',   nom: 'Serge Kouadio',   fonction: 'Responsable Facilities',    service: 'FACILITIES', role: 'manager',   n1: 'mireille.gbagbo', actif: true,  derniere: '2026-10-14T07:55' },
+  { id: 'carine.toro',     nom: 'Carine Toro',     fonction: 'Responsable Achats et Moyens Généraux', service: 'ACHATS & MOYENS GÉNÉRAUX', role: 'raf', n1: 'mireille.gbagbo', actif: true, derniere: '2026-10-14T08:40' },
   { id: 'mireille.gbagbo', nom: 'Mireille Gbagbo', fonction: 'Directrice administrative', service: 'DIRECTION',  role: 'admin',     n1: null,              actif: true,  derniere: '2026-10-12T11:22' },
   { id: 'binta.sow',       nom: 'Binta Sow',       fonction: 'Agente d\'accueil',         service: 'FACILITIES', role: 'demandeur', n1: 'serge.kouadio',   actif: false, derniere: '2026-08-28T16:30' },
 ];
@@ -585,7 +614,7 @@ const userById = id => USERS.find(u => u.id === id);
 
 const seed = (ref, by, objet, proforma, montant, date, statut, extra = {}) => ({
   ref, demandeur: by, n1: userById(by).n1, objet, proforma, montant, date, statut, description: '',
-  sigDemandeur: { by, at: date }, sigManager: null, commentaire: '', pieces: proforma ? [`Proforma_${ref}.pdf`] : [],
+  sigDemandeur: { by, at: date }, sigManager: null, sigRaf: null, raf: null, retourRaf: null, commentaire: '', pieces: proforma ? [`Proforma_${ref}.pdf`] : [],
   historique: [{ at: date, by, action: 'Fiche signée et transmise au N+1' }], ...extra,
 });
 const DEMANDES = [
@@ -593,20 +622,27 @@ const DEMANDES = [
   seed('FED-2026-0141', 'awa.ndiaye',    'Fournitures d\'entretien – 4e trimestre',     false, 420000,  '2026-10-12T15:10', 'attente'),
   seed('FED-2026-0140', 'serge.kouadio', 'Audit de conformité incendie du siège',       true,  2400000, '2026-10-12T10:05', 'attente'),
   seed('FED-2026-0139', 'ibrahim.toure', 'Réparation de la barrière du parking',        true,  650000,  '2026-10-11T11:05', 'validee', {
-    sigManager: { by: 'serge.kouadio', at: '2026-10-11T16:20' },
-    historique: [{ at: '2026-10-11T11:05', by: 'ibrahim.toure', action: 'Fiche signée et transmise au N+1' }, { at: '2026-10-11T16:20', by: 'serge.kouadio', action: 'Demande validée et signée' }],
+    sigManager: { by: 'serge.kouadio', at: '2026-10-11T16:20' }, sigRaf: { by: RAF_ID, at: '2026-10-12T09:15' },
+    raf: { tranche: 2, reserve: '', date: '2026-10-12T09:15', proformas: [{ fournisseur: 'SOTRA Équipements', ref: 'PF-2231', montant: 640000 }, { fournisseur: 'Ivoire Portails', ref: 'D-0912', montant: 715000 }, { fournisseur: '', ref: '', montant: 0 }] },
+    historique: [{ at: '2026-10-11T11:05', by: 'ibrahim.toure', action: 'Fiche signée et transmise au N+1' }, { at: '2026-10-11T16:20', by: 'serge.kouadio', action: 'Validée et signée par le N+1, transmise au RAF/HF' }, { at: '2026-10-12T09:15', by: RAF_ID, action: 'Validation finale et signature RAF/HF' }],
+  }),
+  seed('FED-2026-0138', 'awa.ndiaye',    'Recharge et remplacement de 12 extincteurs',  true,  1240000, '2026-10-10T11:20', 'raf', {
+    sigManager: { by: 'serge.kouadio', at: '2026-10-11T08:45' },
+    historique: [{ at: '2026-10-10T11:20', by: 'awa.ndiaye', action: 'Fiche signée et transmise au N+1' }, { at: '2026-10-11T08:45', by: 'serge.kouadio', action: 'Validée et signée par le N+1, transmise au RAF/HF' }],
   }),
   seed('FED-2026-0137', 'fatou.diallo',  'Location de chaises pour le séminaire RH',    true,  300000,  '2026-10-10T08:30', 'rejetee', {
     commentaire: 'Merci de joindre deux pro-formas comparatives avant de renvoyer la demande.',
     historique: [{ at: '2026-10-10T08:30', by: 'fatou.diallo', action: 'Fiche signée et transmise au N+1' }, { at: '2026-10-10T14:12', by: 'serge.kouadio', action: 'Demande rejetée', note: 'Merci de joindre deux pro-formas comparatives avant de renvoyer la demande.' }],
   }),
   seed('FED-2026-0134', 'awa.ndiaye',    'Contrat de dératisation trimestriel',         true,  980000,  '2026-10-06T16:45', 'validee', {
-    sigManager: { by: 'serge.kouadio', at: '2026-10-07T09:10' },
-    historique: [{ at: '2026-10-06T16:45', by: 'awa.ndiaye', action: 'Fiche signée et transmise au N+1' }, { at: '2026-10-07T09:10', by: 'serge.kouadio', action: 'Demande validée et signée' }],
+    sigManager: { by: 'serge.kouadio', at: '2026-10-07T09:10' }, sigRaf: { by: RAF_ID, at: '2026-10-07T15:30' },
+    raf: { tranche: 2, reserve: 'Contrat à renégocier à l\'échéance.', date: '2026-10-07T15:30', proformas: [{ fournisseur: 'Hygiène Services CI', ref: 'HS-118', montant: 980000 }, { fournisseur: 'Bio-Protect', ref: 'BP-2026-44', montant: 1050000 }, { fournisseur: 'NetPro', ref: 'NP-77', montant: 1120000 }] },
+    historique: [{ at: '2026-10-06T16:45', by: 'awa.ndiaye', action: 'Fiche signée et transmise au N+1' }, { at: '2026-10-07T09:10', by: 'serge.kouadio', action: 'Validée et signée par le N+1, transmise au RAF/HF' }, { at: '2026-10-07T15:30', by: RAF_ID, action: 'Validation finale et signature RAF/HF' }],
   }),
   seed('FED-2026-0131', 'fatou.diallo',  'Plantes et entretien de l\'accueil',          false, 150000,  '2026-10-03T10:20', 'validee', {
-    sigManager: { by: 'serge.kouadio', at: '2026-10-03T15:02' },
-    historique: [{ at: '2026-10-03T10:20', by: 'fatou.diallo', action: 'Fiche signée et transmise au N+1' }, { at: '2026-10-03T15:02', by: 'serge.kouadio', action: 'Demande validée et signée' }],
+    sigManager: { by: 'serge.kouadio', at: '2026-10-03T15:02' }, sigRaf: { by: RAF_ID, at: '2026-10-04T10:05' },
+    raf: { tranche: 2, reserve: '', date: '2026-10-04T10:05', proformas: [{ fournisseur: 'Jardin d\'Ivoire', ref: 'JI-532', montant: 150000 }, { fournisseur: '', ref: '', montant: 0 }, { fournisseur: '', ref: '', montant: 0 }] },
+    historique: [{ at: '2026-10-03T10:20', by: 'fatou.diallo', action: 'Fiche signée et transmise au N+1' }, { at: '2026-10-03T15:02', by: 'serge.kouadio', action: 'Validée et signée par le N+1, transmise au RAF/HF' }, { at: '2026-10-04T10:05', by: RAF_ID, action: 'Validation finale et signature RAF/HF' }],
   }),
 ];
 let nextRef = 143;
@@ -616,7 +652,8 @@ let NOTIFS = [
   { to: 'serge.kouadio',   at: '2026-10-12T15:10', ref: 'FED-2026-0141', text: 'Awa Ndiaye vous a transmis une demande à valider.', lu: false },
   { to: 'mireille.gbagbo', at: '2026-10-12T10:05', ref: 'FED-2026-0140', text: 'Serge Kouadio vous a transmis une demande à valider.', lu: false },
   { to: 'fatou.diallo',    at: '2026-10-10T14:12', ref: 'FED-2026-0137', text: 'Votre demande a été rejetée par Serge Kouadio : « Merci de joindre deux pro-formas comparatives… »', lu: false },
-  { to: 'ibrahim.toure',   at: '2026-10-11T16:20', ref: 'FED-2026-0139', text: 'Votre demande a été validée et signée par Serge Kouadio.', lu: true },
+  { to: 'carine.toro',     at: '2026-10-11T08:45', ref: 'FED-2026-0138', text: 'Serge Kouadio a validé une demande d\'Awa Ndiaye : elle attend votre validation.', lu: false },
+  { to: 'ibrahim.toure',   at: '2026-10-11T16:20', ref: 'FED-2026-0139', text: 'Votre demande a reçu la validation finale de Carine Toro (RAF/HF).', lu: true },
 ];
 
 let AUDIT = [
@@ -668,16 +705,20 @@ function audit(action, cible = '—') {
   AUDIT.unshift({ at: nowIso(), user: session.id, action, cible, ip: '10.0.3.17' });
 }
 function notify(to, ref, text) { if (to) NOTIFS.unshift({ to, at: nowIso(), ref, text, lu: false }); }
-const can = perm => session && ROLES[session.role].perms.includes(perm);
+const can = perm => !!session && [].concat(perm).some(p => ROLES[session.role].perms.includes(p));
 
-// Ce que chaque profil peut voir : ses demandes, celles de son équipe (N+1), tout (admin).
-const visible = () => DEMANDES.filter(d => session.role === 'admin' || d.demandeur === session.id || d.n1 === session.id);
-const aValider = () => DEMANDES.filter(d => d.statut === 'attente' && d.n1 === session.id);
+// Ce que chaque profil peut voir : ses demandes, celles de son équipe (N+1),
+// celles transmises au RAF/HF, tout (admin).
+const visible = () => DEMANDES.filter(d => session.role === 'admin' || d.demandeur === session.id || d.n1 === session.id
+  || (session.role === 'raf' && (d.statut === 'raf' || d.sigRaf || d.retourRaf)));
+const aValider = () => session.role === 'raf'
+  ? DEMANDES.filter(d => d.statut === 'raf')
+  : DEMANDES.filter(d => d.statut === 'attente' && d.n1 === session.id);
 
 /* =========================================================
    Connexion
    ========================================================= */
-const DEMO = ['fatou.diallo', 'serge.kouadio', 'mireille.gbagbo'];
+const DEMO = ['fatou.diallo', 'serge.kouadio', 'carine.toro', 'mireille.gbagbo'];
 $('#domainLabel').textContent = '@' + ALLOWED_DOMAIN;
 function renderDemoAccounts() {
   const current = $('#email').value.split('@')[0];
@@ -784,7 +825,7 @@ const NAV = [
   { path: 'tableau-de-bord',  label: 'Tableau de bord',  icon: 'home',   perm: 'dashboard' },
   { path: 'nouvelle-demande', label: 'Nouvelle demande', icon: 'plus',   perm: 'nouveau' },
   { path: 'demandes',         label: 'Demandes',         icon: 'folder', perm: 'demandes' },
-  { path: 'a-valider',        label: 'À valider',        icon: 'inbox',  perm: 'valider', count: () => aValider().length },
+  { path: 'a-valider',        label: 'À valider',        icon: 'inbox',  perm: ['valider', 'raf'], count: () => aValider().length },
   { group: 'Administration' },
   { path: 'utilisateurs',     label: 'Utilisateurs & rôles', icon: 'users', perm: 'utilisateurs' },
   { path: 'audit',            label: "Journal d'audit",  icon: 'log',    perm: 'audit' },
@@ -806,7 +847,7 @@ function renderNav(current) {
 const ROUTES = {
   'tableau-de-bord':  { perm: 'dashboard', view: viewDashboard },
   'demandes':         { perm: 'demandes',  view: viewDemandes },
-  'a-valider':        { perm: 'valider',   view: viewAValider },
+  'a-valider':        { perm: ['valider', 'raf'], view: viewAValider },
   'demande':          { perm: 'demandes',  view: viewDemande, nav: 'demandes' },
   'nouvelle-demande': { perm: 'nouveau',   view: viewNouvelle },
   'utilisateurs':     { perm: 'utilisateurs', view: viewUsers },
@@ -912,7 +953,49 @@ function ficheView(d) {
         <div class="fiche-sign"><h3>Signature Demandeur</h3>${signatureBlock(d.sigDemandeur, 'Non signée')}</div>
         <div class="fiche-sign"><h3>Signature Manager</h3>${managerBox}</div>
       </div>
+      ${rafSection(d)}
     </div>`;
+}
+
+/* Bloc « Validation (1) de la demande par RAF/HF » : formulaire pour le RAF/HF, lecture seule pour les autres */
+function rafSection(d) {
+  const raf = userById(RAF_ID);
+  const editable = session.id === RAF_ID && d.statut === 'raf';
+  if (!editable && !d.raf && d.statut !== 'raf') return '';
+  const head = `<div class="fiche-section" style="border-top:2px solid var(--text)">Validation (1) de la demande par RAF/HF</div>`;
+  const ident = `
+    <div class="fiche-cell"><span>Fonction</span><b>${esc(raf.fonction.toUpperCase())}</b></div>
+    <div class="fiche-cell"><span>Nom-Prénom</span><b>${esc(raf.nom.toUpperCase())}</b></div>`;
+  if (!editable && !d.raf) return `${head}<div class="fiche-grid">${ident}</div>
+    <div class="fiche-signs single"><div class="fiche-sign"><h3>Signature</h3>${signatureBlock(null, `${icon('clock')}&nbsp;En attente de ${esc(raf.nom)} (RAF/HF)`)}</div></div>`;
+  if (!editable) {
+    const r = d.raf;
+    return `${head}<div class="fiche-grid">${ident}
+      <div class="fiche-cell full"><span>Montant achat</span><div class="tranches">${TRANCHES.map((t, i) => `<span class="tranche ${i === r.tranche ? 'on' : ''}">${i === r.tranche ? icon('check') : ''}${t}</span>`).join('')}</div></div>
+      ${r.proformas.map((p, i) => `<div class="fiche-cell full"><div class="pf-row"><div><span>Proforma ${i + 1}</span><b>${esc(p.fournisseur) || '—'}</b></div><div><span>Réf N°</span><b>${esc(p.ref) || '—'}</b></div><div><span>Montant</span><b>${p.montant ? fcfa(p.montant) : '— FCFA'}</b></div></div></div>`).join('')}
+      <div class="fiche-cell full"><span>Réserve</span><b style="font-weight:500">${esc(r.reserve) || '—'}</b></div>
+      <div class="fiche-cell full"><span>Date</span><b>${fDate(r.date)}</b></div>
+    </div>
+    <div class="fiche-signs single"><div class="fiche-sign"><h3>Signature</h3>${signatureBlock(d.sigRaf, '')}</div></div>`;
+  }
+  const t = trancheFor(d.montant);
+  return `${head}<div class="fiche-grid" id="rafForm">${ident}
+      <div class="fiche-cell full"><span>Montant achat *</span>
+        <div class="tranches">${TRANCHES.map((l, i) => `<label class="tranche"><input type="radio" name="tranche" value="${i}" ${i === t ? 'checked' : ''}>${l}</label>`).join('')}</div>
+        <div class="field-error" id="eTranche"></div></div>
+      ${[0, 1, 2].map(i => `<div class="fiche-cell full"><div class="pf-row">
+        <div><label for="pfF${i}">Proforma ${i + 1}${i === 0 ? ' *' : ''}</label><input class="input" id="pfF${i}" placeholder="Fournisseur"></div>
+        <div><label for="pfR${i}">Réf N°</label><input class="input" id="pfR${i}" placeholder="Ex. PF-2026-001"></div>
+        <div><label for="pfM${i}">Montant (FCFA)</label><input class="input" id="pfM${i}" inputmode="numeric" placeholder="0" oninput="this.value=this.value.replace(/[^0-9]/g,'').replace(/\\B(?=(\\d{3})+(?!\\d))/g,' ')"></div>
+      </div>${i === 0 ? '<div class="field-error" id="ePf"></div>' : ''}</div>`).join('')}
+      <div class="fiche-cell full"><label for="rafReserve">Réserve</label><textarea class="input" id="rafReserve" rows="2" placeholder="Observations éventuelles (facultatif)"></textarea></div>
+      <div class="fiche-cell full"><span>Date</span><b>${fDate(new Date())}</b></div>
+    </div>
+    <div class="fiche-signs single"><div class="fiche-sign"><h3>Signature *</h3>${padHtml('padRaf', 'Signez ici pour valider')}<div class="field-error" id="eSigR"></div>
+      <div class="form-actions" style="margin-top:6px">
+        <button class="btn btn-ghost" onclick="openReturn('${d.ref}')">${icon('arrow', 'i-back')} Retourner au N+1</button>
+        <button class="btn btn-success" onclick="submitRaf('${d.ref}')">${icon('check')} Valider et signer</button>
+      </div></div></div>`;
 }
 
 /* =========================================================
@@ -929,15 +1012,15 @@ function viewDashboard() {
       <div class="kpi-val">${val}</div>
       <div class="kpi-delta muted">${sub}</div>
     </a>`;
-  const isN1 = can('valider');
+  const isN1 = can(['valider', 'raf']);
   const counts = Object.keys(STATUS).filter(s => s !== 'brouillon').map(s => [s, list.filter(d => d.statut === s).length]);
   const max = Math.max(1, ...counts.map(c => c[1]));
   return `
     ${pageHead(`Bonjour, ${esc(session.name.split(' ')[0])}`, `${ROLES[session.role].label} · situation au ${fDate(new Date())} à ${fTime(new Date())}.`,
       `<a class="btn btn-primary" href="#/nouvelle-demande">${icon('plus', 'i-plus')} Nouvelle demande</a>`)}
-    ${isN1 && todo.length ? `<div class="alert alert-warning">${icon('inbox')}<div><b>${todo.length} demande${todo.length > 1 ? 's' : ''} en attente de votre signature</b><p>Vos collaborateurs attendent votre validation.</p><a class="btn btn-ghost btn-sm" href="#/a-valider">Voir les demandes ${icon('arrow', 'i-arrow')}</a></div></div>` : ''}
+    ${isN1 && todo.length ? `<div class="alert alert-warning">${icon('inbox')}<div><b>${todo.length} demande${todo.length > 1 ? 's' : ''} en attente de votre signature</b><p>${session.role === 'raf' ? 'Fiches validées par les N+1, en attente de votre validation finale.' : 'Vos collaborateurs attendent votre validation.'}</p><a class="btn btn-ghost btn-sm" href="#/a-valider">Voir les demandes ${icon('arrow', 'i-arrow')}</a></div></div>` : ''}
     <div class="kpis">
-      ${isN1 ? kpi('À valider', todo.length, 'inbox', fcfa(sum(todo)), '#/a-valider') : kpi('Mes demandes en attente', mine.filter(d => d.statut === 'attente').length, 'clock', 'chez votre N+1', '#/demandes')}
+      ${isN1 ? kpi('À valider', todo.length, 'inbox', fcfa(sum(todo)), '#/a-valider') : kpi('Mes demandes en cours', mine.filter(d => ['attente', 'raf'].includes(d.statut)).length, 'clock', 'chez le N+1 ou le RAF/HF', '#/demandes')}
       ${kpi('Validées', list.filter(d => d.statut === 'validee').length, 'check', fcfa(sum(list.filter(d => d.statut === 'validee'))) + ' engagés', '#/demandes')}
       ${kpi('Rejetées', list.filter(d => d.statut === 'rejetee').length, 'message', 'avec commentaire', '#/demandes')}
       ${kpi('Montant total demandé', fcfa(sum(list)), 'wallet', `${list.length} demandes`, '#/demandes')}
@@ -955,7 +1038,7 @@ function viewDashboard() {
         </div>
         <div class="list" style="margin-top:18px">
           <h3 style="margin-bottom:4px">Circuit de validation</h3>
-          ${[['pen', 'Le demandeur remplit et signe la fiche'], ['inbox', 'Le N+1 reçoit la demande'], ['check', 'Il valide en signant… '], ['message', '…ou rejette avec un commentaire']].map(([ic, t]) => `<div class="list-item"><div class="doc-ico">${icon(ic)}</div><div class="grow"><span style="font-size:13px;color:var(--text)">${t}</span></div></div>`).join('')}
+          ${[['pen', 'Le demandeur remplit et signe la fiche'], ['inbox', 'Le N+1 valide en signant, ou rejette avec un commentaire'], ['shield', 'Le RAF/HF complète sa partie et signe, ou retourne la fiche au N+1'], ['check', 'La demande est validée']].map(([ic, t]) => `<div class="list-item"><div class="doc-ico">${icon(ic)}</div><div class="grow"><span style="font-size:13px;color:var(--text)">${t}</span></div></div>`).join('')}
         </div>
       </div>
     </div>`;
@@ -963,11 +1046,11 @@ function viewDashboard() {
 
 let filtre = 'toutes', recherche = '';
 function viewDemandes() {
-  const filters = [['toutes', 'Toutes'], ['attente', 'En attente N+1'], ['validee', 'Validées'], ['rejetee', 'Rejetées']];
+  const filters = [['toutes', 'Toutes'], ['attente', 'En attente N+1'], ['raf', 'En attente RAF/HF'], ['validee', 'Validées'], ['rejetee', 'Rejetées']];
   let list = visible();
   if (filtre !== 'toutes') list = list.filter(d => d.statut === filtre);
   if (recherche) { const q = recherche.toLowerCase(); list = list.filter(d => [d.ref, d.objet, nom(d.demandeur)].some(v => v.toLowerCase().includes(q))); }
-  const scope = session.role === 'admin' ? 'Toutes les demandes' : can('valider') ? 'Vos demandes et celles de votre équipe' : 'Vos demandes';
+  const scope = session.role === 'admin' ? 'Toutes les demandes' : session.role === 'raf' ? 'Demandes transmises au RAF/HF' : can('valider') ? 'Vos demandes et celles de votre équipe' : 'Vos demandes';
   return `
     ${pageHead("Fiches d'engagement de dépenses", `${scope} · ${visible().length} au total`,
       `<button class="btn btn-ghost" onclick="toast('Export généré (démo)'); audit('Export', 'Liste des demandes')">${icon('download')} Exporter</button>
@@ -982,7 +1065,7 @@ function viewDemandes() {
 function viewAValider() {
   const list = aValider();
   return `
-    ${pageHead('À valider', 'Demandes de vos collaborateurs en attente de votre signature.')}
+    ${pageHead('À valider', session.role === 'raf' ? 'Fiches validées par les N+1, en attente de votre validation finale.' : 'Demandes de vos collaborateurs en attente de votre signature.')}
     ${demandeTable(list, `${icon('check')} Vous êtes à jour : aucune demande en attente.`)}`;
 }
 
@@ -993,19 +1076,34 @@ function viewDemande(ref) {
   NOTIFS.filter(x => x.to === session.id && x.ref === ref).forEach(x => x.lu = true);
   const isN1 = d.n1 === session.id && d.statut === 'attente';
   const isOwner = d.demandeur === session.id;
-  const actions = isN1 ? `
+  const isRaf = session.id === RAF_ID && d.statut === 'raf';
+  if (isRaf) afterRender = () => {
+    initPad($('#padRaf')).addEventListener('pointerdown', () => { $('#eSigR').textContent = ''; });
+    $('#rafForm').addEventListener('input', e => {
+      e.target.classList.remove('invalid');
+      if (e.target.name === 'tranche') $('#eTranche').textContent = '';
+      if (/^pf.0$/.test(e.target.id)) $('#ePf').textContent = '';
+    });
+  };
+  const actions = isRaf ? `
+    <button class="btn btn-ghost" onclick="openReturn('${d.ref}')">${icon('arrow', 'i-back')} Retourner au N+1</button>
+    <button class="btn btn-primary" onclick="document.getElementById('rafForm').scrollIntoView({behavior:'smooth'})">${icon('pen')} Compléter et signer</button>` : isN1 ? `
     <button class="btn btn-ghost" onclick="openReject('${d.ref}')">${icon('x')} Rejeter</button>
     <button class="btn btn-primary" onclick="openValidate('${d.ref}')">${icon('pen')} Valider et signer</button>` : '';
   let banner = '';
   if (d.statut === 'rejetee') banner = `<div class="alert alert-danger">${icon('message')}<div><b>Demande rejetée par ${esc(nom(d.n1))}</b><p>« ${esc(d.commentaire)} »</p>${isOwner ? `<a class="btn btn-ghost btn-sm" href="#/nouvelle-demande/${d.ref}">${icon('pen')} Corriger et renvoyer</a>` : ''}</div></div>`;
-  else if (d.statut === 'validee') banner = `<div class="alert alert-success">${icon('check')}<div><b>Demande validée et signée par ${esc(nom(d.n1))}</b><p>Le ${fDate(d.sigManager.at)} à ${fTime(d.sigManager.at)}.${d.commentaire ? ` Commentaire : « ${esc(d.commentaire)} »` : ''}</p></div></div>`;
+  else if (d.statut === 'validee') banner = `<div class="alert alert-success">${icon('check')}<div><b>Demande validée</b><p>Signée par ${esc(nom(d.n1))} (N+1) puis par ${esc(nom(RAF_ID))} (RAF/HF) le ${fDate(d.sigRaf.at)} à ${fTime(d.sigRaf.at)}.</p></div></div>`;
+  else if (isRaf) banner = `<div class="alert alert-warning">${icon('inbox')}<div><b>Cette demande attend votre validation finale</b><p>Les parties Demandeur et Manager sont en lecture seule. Complétez votre partie en bas de la fiche et signez, ou retournez-la au N+1 si elle est mal remplie.</p></div></div>`;
+  else if (d.statut === 'raf') banner = `<div class="alert alert-warning">${icon('clock')}<div><b>Validée par ${esc(nom(d.n1))} (N+1)</b><p>En attente de la validation finale de ${esc(nom(RAF_ID))} (RAF/HF).</p></div></div>`;
+  else if (isN1 && d.retourRaf) banner = `<div class="alert alert-danger">${icon('message')}<div><b>Retournée par ${esc(nom(d.retourRaf.by))} (RAF/HF) le ${fDate(d.retourRaf.at)} à ${fTime(d.retourRaf.at)}</b><p>« ${esc(d.retourRaf.comment)} »</p><p class="muted" style="font-size:12.5px">Validez à nouveau si la fiche est correcte, ou rejetez-la vers ${esc(nom(d.demandeur))} pour correction.</p></div></div>`;
   else if (isN1) banner = `<div class="alert alert-warning">${icon('inbox')}<div><b>Cette demande attend votre décision</b><p>Validez-la en signant, ou rejetez-la avec un commentaire qui sera transmis à ${esc(nom(d.demandeur))}.</p></div></div>`;
+  else if (d.statut === 'attente' && d.retourRaf) banner = `<div class="alert alert-warning">${icon('clock')}<div><b>Retournée au N+1 par le RAF/HF</b><p>« ${esc(d.retourRaf.comment)} »</p></div></div>`;
   else if (d.statut === 'attente') banner = `<div class="alert alert-warning">${icon('clock')}<div><b>En attente de validation</b><p>Transmise à ${esc(nom(d.n1))} (N+1) le ${fDate(d.date)} à ${fTime(d.date)}.</p></div></div>`;
-  const step = d.statut === 'attente' ? 2 : 3;
-  const steps = ['Fiche remplie', 'Signature demandeur', 'Décision du N+1'].map((s, i) => {
+  const step = { attente: 2, raf: 3, validee: 4, rejetee: 3 }[d.statut];
+  const steps = ['Fiche remplie', 'Signature demandeur', 'Validation N+1', 'Validation RAF/HF'].map((s, i) => {
+    const rejected = i === 2 && d.statut === 'rejetee';
     const state = i < step ? 'done' : i === step ? 'active' : '';
-    const label = i === 2 && d.statut === 'validee' ? 'Validée par le N+1' : i === 2 && d.statut === 'rejetee' ? 'Rejetée par le N+1' : s;
-    return `<div class="step ${state}"><div class="dotnum">${state === 'done' ? icon(i === 2 && d.statut === 'rejetee' ? 'x' : 'check') : i + 1}</div>${label}</div>`;
+    return `<div class="step ${state}"><div class="dotnum">${state === 'done' ? icon(rejected ? 'x' : 'check') : i + 1}</div>${rejected ? 'Rejetée par le N+1' : s}</div>`;
   }).join('');
   return `
     ${pageHead(esc(d.objet), `${badge(d.statut)} <span class="ref" style="margin-left:8px">${d.ref}</span>`, actions, crumbs(d.ref))}
@@ -1153,12 +1251,12 @@ function submitFiche(resubmitRef) {
   let d;
   if (resubmitRef) {
     d = DEMANDES.find(x => x.ref === resubmitRef);
-    Object.assign(d, { objet, proforma: pf.value === 'oui', montant, description: $('#fDesc').value.trim(), date: now, statut: 'attente', sigDemandeur: sig, sigManager: null, commentaire: '', pieces });
+    Object.assign(d, { objet, proforma: pf.value === 'oui', montant, description: $('#fDesc').value.trim(), date: now, statut: 'attente', sigDemandeur: sig, sigManager: null, sigRaf: null, raf: null, retourRaf: null, commentaire: '', pieces });
     d.historique.push({ at: now, by: session.id, action: 'Fiche corrigée, signée et renvoyée au N+1' });
   } else {
     const ref = `FED-2026-${String(nextRef++).padStart(4, '0')}`;
     d = { ref, demandeur: session.id, n1: me.n1, objet, proforma: pf.value === 'oui', montant, description: $('#fDesc').value.trim(), date: now, statut: 'attente',
-          sigDemandeur: sig, sigManager: null, commentaire: '', pieces: pieces.map(p => p.replace('jointe', ref)), historique: [{ at: now, by: session.id, action: 'Fiche signée et transmise au N+1' }] };
+          sigDemandeur: sig, sigManager: null, sigRaf: null, raf: null, retourRaf: null, commentaire: '', pieces: pieces.map(p => p.replace('jointe', ref)), historique: [{ at: now, by: session.id, action: 'Fiche signée et transmise au N+1' }] };
     DEMANDES.unshift(d);
   }
   notify(d.n1, d.ref, `${me.nom} vous a transmis une demande à valider${resubmitRef ? ' (version corrigée)' : ''}.`);
@@ -1190,12 +1288,13 @@ function confirmValidate(ref) {
   const d = DEMANDES.find(x => x.ref === ref);
   const now = nowIso();
   const com = $('#vCom').value.trim();
-  Object.assign(d, { statut: 'validee', sigManager: { by: session.id, at: now, img: pad.toDataURL() }, commentaire: com });
-  d.historique.push({ at: now, by: session.id, action: 'Demande validée et signée', note: com || undefined });
-  notify(d.demandeur, ref, `Votre demande a été validée et signée par ${session.name}.`);
-  audit('Demande validée', ref);
+  Object.assign(d, { statut: 'raf', sigManager: { by: session.id, at: now, img: pad.toDataURL() }, commentaire: com, retourRaf: null });
+  d.historique.push({ at: now, by: session.id, action: 'Validée et signée par le N+1, transmise au RAF/HF', note: com || undefined });
+  notify(d.demandeur, ref, `Votre demande a été validée par ${session.name} et transmise au RAF/HF.`);
+  notify(RAF_ID, ref, `${session.name} a validé une demande de ${nom(d.demandeur)} : elle attend votre validation.`);
+  audit('Demande validée (N+1)', ref);
   closeModal();
-  toast(`Demande ${ref} validée`);
+  toast(`Demande ${ref} validée · transmise à ${nom(RAF_ID)} (RAF/HF)`);
   render();
 }
 
@@ -1213,12 +1312,60 @@ function confirmReject(ref) {
   if (com.length < 10) { $('#eRCom').textContent = 'Le commentaire est obligatoire (10 caractères minimum).'; $('#rCom').classList.add('invalid'); return; }
   const d = DEMANDES.find(x => x.ref === ref);
   const now = nowIso();
-  Object.assign(d, { statut: 'rejetee', commentaire: com });
+  Object.assign(d, { statut: 'rejetee', commentaire: com, retourRaf: null });
   d.historique.push({ at: now, by: session.id, action: 'Demande rejetée', note: com });
   notify(d.demandeur, ref, `Votre demande a été rejetée par ${session.name} : « ${com.length > 70 ? com.slice(0, 70) + '…' : com} »`);
   audit('Demande rejetée', ref);
   closeModal();
   toast(`Demande ${ref} rejetée · commentaire envoyé à ${nom(d.demandeur)}`);
+  render();
+}
+
+function submitRaf(ref) {
+  const d = DEMANDES.find(x => x.ref === ref);
+  const tr = document.querySelector('input[name=tranche]:checked');
+  const num = id => Number($(id).value.replace(/\D/g, ''));
+  const proformas = [0, 1, 2].map(i => ({ fournisseur: $('#pfF' + i).value.trim(), ref: $('#pfR' + i).value.trim(), montant: num('#pfM' + i) }));
+  const sigPad = $('#padRaf');
+  let ok = true;
+  $('#eTranche').textContent = tr ? '' : 'Cochez la tranche du montant d\'achat.'; if (!tr) ok = false;
+  const p1 = proformas[0];
+  const pfOk = p1.fournisseur && p1.ref && p1.montant > 0;
+  $('#ePf').textContent = pfOk ? '' : 'Renseignez au moins la proforma 1 (fournisseur, référence et montant).'; if (!pfOk) ok = false;
+  ['#pfF0', '#pfR0', '#pfM0'].forEach(id => $(id).classList.toggle('invalid', !pfOk && !$(id).value.trim()));
+  $('#eSigR').textContent = sigPad.isEmpty ? 'Votre signature est obligatoire pour valider.' : ''; if (sigPad.isEmpty) { ok = false; sigPad.classList.add('invalid'); }
+  if (!ok) { toast('Complétez les champs signalés'); return; }
+  const now = nowIso();
+  Object.assign(d, { statut: 'validee', sigRaf: { by: session.id, at: now, img: sigPad.toDataURL() },
+    raf: { tranche: Number(tr.value), proformas, reserve: $('#rafReserve').value.trim(), date: now } });
+  d.historique.push({ at: now, by: session.id, action: 'Validation finale et signature RAF/HF', note: d.raf.reserve ? `Réserve : ${d.raf.reserve}` : undefined });
+  notify(d.demandeur, ref, `Votre demande a reçu la validation finale de ${session.name} (RAF/HF).`);
+  notify(d.n1, ref, `La demande de ${nom(d.demandeur)} a reçu la validation finale du RAF/HF.`);
+  audit('Validation finale RAF/HF', ref);
+  toast(`Demande ${ref} validée`);
+  render();
+}
+
+function openReturn(ref) {
+  const d = DEMANDES.find(x => x.ref === ref);
+  openModal(`
+    <div class="modal-head"><h2>Retourner au N+1</h2><button class="icon-btn" onclick="closeModal()" aria-label="Fermer">${icon('x')}</button></div>
+    <p class="muted" style="margin:0">${d.ref} · ${esc(d.objet)} · N+1 : <b style="color:var(--text)">${esc(nom(d.n1))}</b></p>
+    <div class="field"><label for="retCom">Ce qui n'est pas correctement rempli *</label><textarea class="input" id="retCom" rows="4" placeholder="Ex. Le montant estimé ne correspond pas à la pro-forma jointe."></textarea><div class="field-error" id="eRet"></div></div>
+    <div class="modal-actions"><button class="btn btn-ghost" onclick="closeModal()">Annuler</button><button class="btn btn-danger" onclick="confirmReturn('${ref}')">${icon('arrow', 'i-back')} Retourner et notifier</button></div>`,
+    () => $('#retCom').focus());
+}
+function confirmReturn(ref) {
+  const com = $('#retCom').value.trim();
+  if (com.length < 10) { $('#eRet').textContent = 'Le commentaire est obligatoire (10 caractères minimum).'; $('#retCom').classList.add('invalid'); return; }
+  const d = DEMANDES.find(x => x.ref === ref);
+  const now = nowIso();
+  Object.assign(d, { statut: 'attente', sigManager: null, retourRaf: { by: session.id, at: now, comment: com } });
+  d.historique.push({ at: now, by: session.id, action: 'Retournée au N+1 par le RAF/HF', note: com });
+  notify(d.n1, ref, `${session.name} (RAF/HF) vous a retourné une demande : « ${com.length > 70 ? com.slice(0, 70) + '…' : com} »`);
+  audit('Demande retournée au N+1', ref);
+  closeModal();
+  toast(`Demande ${ref} retournée à ${nom(d.n1)}`);
   render();
 }
 </script>
