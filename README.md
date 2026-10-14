@@ -19,7 +19,10 @@ Le **bon de commande** (05SUP03V03) est retiré de l'application pour le moment 
 
 1. **FED** : le demandeur remplit et signe → **N+1** (valide en signant ou rejette avec commentaire) → **RAF/HF** (montant achat, proformas, réserve, signature, ou retour au N+1) → **CFO** (proforma retenue, montant en chiffre et en lettre, réserve, signature, ou retour au RAF/HF).
 2. Pour une **menue dépense** : fiche de menues dépenses (Version 01) signée par le **RAF/HF**, la **Direction Centrale**, la **Direction Générale si le montant est ≥ 150 001 FCFA**, puis visée par la **Comptabilité** (référence N°, évolution budgétaire, imputation, désignation, pièces justificatives, visa). Chaque signataire peut rejeter avec un commentaire.
-3. **Achat · Facilities (72 h)** : dès que le CFO valide la FED, le service Facilities (logistique) est notifié, **tire la FED en PDF** (sans filigrane) et doit effectuer l'achat **sous 72 h**. L'écran « Achats à traiter » classe les achats par échéance avec un compte à rebours (reste X h, en retard de X h). Facilities confirme l'achat (fournisseur, montant payé, facture) ; une FED seule est alors clôturée. Pour une menue dépense, le suivi de l'achat avance en parallèle de la fiche de menues dépenses.
+3. **Achat · Facilities (72 h)** : toutes les personnes du service **FACILITIES** (sauf pour leurs propres demandes) tirent la FED en PDF (sans filigrane) et doivent effectuer l'achat **sous 72 h** :
+   - **FED seule** : le délai démarre à la validation du CFO ; la demande est clôturée quand Facilities confirme l'achat ;
+   - **Menue dépense** : le délai démarre au décaissement, c'est-à-dire quand la fiche de menues dépenses est signée (RAF/HF, Direction Centrale, et DG si ≥ 150 001 FCFA).
+   L'écran « Achats à traiter » classe les achats par échéance avec un compte à rebours (reste X h, en retard de X h) ; Facilities confirme l'achat (fournisseur, montant payé, facture).
 4. Chaque décision est notifiée et tracée (historique de la demande et journal d'audit).
 
 Profils de démonstration (sélecteur « Profil (démo) ») : Fatou Diallo (demandeur, compte menues dépenses), Awa Ndiaye (demandeur sans compte), Serge Kouadio (N+1), Carine Toro (RAF/HF), Régis Kouamé (CFO / Direction Centrale), Mariam Yenita Bamba (DG), Paul Yao (Comptabilité), Mireille Gbagbo (administratrice).

@@ -678,12 +678,11 @@ const ROLES = {
   cfo:       { label: 'CFO',            perms: ['dashboard', 'demandes', 'cfo'] },
   dg:        { label: 'Direction Générale', perms: ['dashboard', 'demandes', 'dg'] },
   compta:    { label: 'Comptabilité',   perms: ['dashboard', 'demandes', 'compta'] },
-  facilities:{ label: 'Facilities (logistique)', perms: ['dashboard', 'demandes', 'achats'] },
-  admin:     { label: 'Administrateur', perms: ['dashboard', 'demandes', 'nouveau', 'valider', 'utilisateurs', 'audit'] },
+  admin:     { label: 'Administrateur', perms: ['dashboard', 'demandes', 'nouveau', 'valider', 'utilisateurs', 'audit', 'achats'] },
 };
 const PERM_LABELS = {
   dashboard: 'Tableau de bord', demandes: 'Consulter ses demandes', nouveau: 'Créer une demande',
-  valider: 'Valider / rejeter (N+1)', raf: 'Validation (1) RAF/HF', cfo: 'Validation (2) CFO · Direction Centrale', dg: 'Signature DG (menues dépenses ≥ 150 001 FCFA)', compta: 'Visa Comptabilité (menues dépenses)', achats: 'Tirer la FED et traiter l\'achat (72 h)', utilisateurs: 'Gérer les utilisateurs', audit: "Journal d'audit",
+  valider: 'Valider / rejeter (N+1)', raf: 'Validation (1) RAF/HF', cfo: 'Validation (2) CFO · Direction Centrale', dg: 'Signature DG (menues dépenses ≥ 150 001 FCFA)', compta: 'Visa Comptabilité (menues dépenses)', utilisateurs: 'Gérer les utilisateurs', audit: "Journal d'audit",
 };
 // Responsable Achats et Moyens Généraux : dernière validation du circuit.
 const RAF_ID = 'carine.toro';
@@ -727,7 +726,7 @@ const USERS = [
   { id: 'regis.kouame',    nom: 'Régis Kouamé',    fonction: 'Directeur Financier et Comptable', service: 'FINANCE', role: 'cfo', n1: null, actif: true, derniere: '2026-10-14T08:05' },
   { id: 'mariam.bamba',    nom: 'Mariam Yenita Bamba', fonction: 'Directrice Générale', service: 'DIRECTION GÉNÉRALE', role: 'dg', n1: null, actif: true, derniere: '2026-10-13T18:20' },
   { id: 'paul.yao',        nom: 'Paul Yao',        fonction: 'Comptable', service: 'COMPTABILITÉ', role: 'compta', n1: 'regis.kouame', actif: true, derniere: '2026-10-14T08:30' },
-  { id: 'koffi.nguessan',  nom: 'Koffi N\'Guessan', fonction: 'Agent logistique (achats)', service: 'FACILITIES', role: 'facilities', n1: 'serge.kouadio', actif: true, derniere: '2026-10-14T08:20' },
+  { id: 'koffi.nguessan',  nom: 'Koffi N\'Guessan', fonction: 'Agent logistique (achats)', service: 'FACILITIES', role: 'demandeur', n1: 'serge.kouadio', actif: true, derniere: '2026-10-14T08:20' },
   { id: 'mireille.gbagbo', nom: 'Mireille Gbagbo', fonction: 'Directrice administrative', service: 'DIRECTION',  role: 'admin',     n1: null,              actif: true,  derniere: '2026-10-12T11:22' },
   { id: 'binta.sow',       nom: 'Binta Sow',       fonction: 'Agente d\'accueil',         service: 'FACILITIES', role: 'demandeur', n1: 'serge.kouadio',   actif: false, derniere: '2026-08-28T16:30' },
 ];
@@ -856,7 +855,7 @@ DEMANDES.push(
 // Achats déjà effectués par Facilities
 const achatFait = (ref, h, fournisseur, montant) => {
   const d = DEMANDES.find(x => x.ref === ref);
-  d.achat = { fait: { by: 'koffi.nguessan', at: isoPlus(d.sigCfo.at, h), fournisseur, montant, facture: `Facture_${ref}.pdf`, commentaire: '' } };
+  d.achat = { fait: { by: 'koffi.nguessan', at: isoPlus(achatDebut(d), h), fournisseur, montant, facture: `Facture_${ref}.pdf`, commentaire: '' } };
   d.historique.push({ at: d.achat.fait.at, by: 'koffi.nguessan', action: `Achat effectué par Facilities · ${fcfa(montant)}` });
 };
 achatFait('FED-2026-0134', 30, 'Hygiène Services CI', 980000);
@@ -917,7 +916,10 @@ function audit(action, cible = '—') {
   AUDIT.unshift({ at: nowIso(), user: session.id, action, cible, ip: '10.0.3.17' });
 }
 function notify(to, ref, text) { if (to) NOTIFS.unshift({ to, at: nowIso(), ref, text, lu: false }); }
-const can = perm => !!session && [].concat(perm).some(p => ROLES[session.role].perms.includes(p));
+// Le droit « achats » (tirer la FED et traiter l'achat) revient à toutes les personnes du service FACILITIES.
+const SERVICE_ACHATS = 'FACILITIES';
+const can = perm => !!session && [].concat(perm).some(p => ROLES[session.role].perms.includes(p)
+  || (p === 'achats' && userById(session.id)?.service === SERVICE_ACHATS));
 
 // Personne qui doit agir sur la demande à son étape actuelle
 const MENUE_ACTOR = { raf: RAF_ID, dc: CFO_ID, dg: DG_ID, compta: COMPTA_ID };
@@ -925,18 +927,24 @@ const actorOf = d => d.statut.startsWith('m_') ? MENUE_ACTOR[d.statut.slice(2)] 
 const menueMontant = d => d.cfo?.montant ?? d.montant;
 // Ce que chaque profil peut voir : ses demandes, celles de son équipe (N+1), celles où il intervient, tout (admin).
 const visible = () => DEMANDES.filter(d => session.role === 'admin' || d.demandeur === session.id || d.n1 === session.id
-  || (session.role === 'facilities' && !!d.sigCfo)
+  || (can('achats') && !!achatDebut(d))
   || actorOf(d) === session.id || d.rejetPar === session.id
   || Object.values(d.sigs || {}).some(sg => sg.by === session.id)
   || (session.role === 'raf' && (d.sigRaf || d.retourRaf)) || (session.role === 'cfo' && (d.sigCfo || d.retourCfo)));
-const aValider = () => session.role === 'facilities' ? DEMANDES.filter(achatPending) : DEMANDES.filter(d => actorOf(d) === session.id);
+const aValider = () => DEMANDES.filter(d => actorOf(d) === session.id);
 // Achat Facilities : délai de 72 h à compter de la validation de la FED par le CFO
-const achatPending = d => !!d.sigCfo && d.statut !== 'rejetee' && !d.achat?.fait;
-const achatEcheance = d => isoPlus(d.sigCfo.at, ACHAT_DELAI_H);
+function achatDebut(d) {
+  if (!d.sigCfo || d.statut === 'rejetee') return null;
+  if (d.type !== 'menue') return d.sigCfo.at;
+  const last = (d.cfo?.montant ?? d.montant) >= SEUIL_DG ? 'dg' : 'dc'; // dernière signature avant décaissement
+  return d.sigs?.[last]?.at || null;
+}
+const achatPending = d => !!achatDebut(d) && !d.achat?.fait;
+const achatEcheance = d => isoPlus(achatDebut(d), ACHAT_DELAI_H);
 const heuresEntre = (a, b) => (toDate(b) - toDate(a)) / 36e5;
 function slaBadge(d) {
   if (d.achat?.fait) {
-    const h = Math.round(heuresEntre(d.sigCfo.at, d.achat.fait.at));
+    const h = Math.round(heuresEntre(achatDebut(d), d.achat.fait.at));
     return `<span class="badge ${h <= ACHAT_DELAI_H ? 'b-success' : 'b-danger'}">Traité en ${h} h</span>`;
   }
   const reste = heuresEntre(new Date(), achatEcheance(d));
@@ -1345,12 +1353,12 @@ function viewDashboard() {
       <div class="kpi-delta muted">${sub}</div>
     </a>`;
   const isN1 = can(['valider', 'raf', 'cfo', 'dg', 'compta']);
-  if (session.role === 'facilities') return viewDashboardFacilities();
   const counts = Object.keys(STATUS).filter(s => s !== 'brouillon').map(s => [s, list.filter(d => d.statut === s).length]);
   const max = Math.max(1, ...counts.map(c => c[1]));
   return `
     ${pageHead(`Bonjour, ${esc(session.name.split(' ')[0])}`, `${ROLES[session.role].label} · situation au ${fDate(new Date())} à ${fTime(new Date())}.`,
       `<a class="btn btn-primary" href="#/nouvelle-demande">${icon('plus', 'i-plus')} Nouvelle demande</a>`)}
+    ${can('achats') ? achatsSummary() : ''}
     ${isN1 && todo.length ? `<div class="alert alert-warning">${icon('inbox')}<div><b>${todo.length} demande${todo.length > 1 ? 's' : ''} en attente de votre signature</b><p>${session.role === 'raf' ? 'Fiches validées par les N+1, en attente de votre validation.' : session.role === 'cfo' ? 'Fiches validées par le RAF/HF et menues dépenses en attente de la Direction Centrale.' : session.role === 'dg' ? 'Fiches de menues dépenses de 150 001 FCFA et plus, en attente de votre signature.' : session.role === 'compta' ? 'Fiches de menues dépenses signées, en attente de votre visa.' : 'Vos collaborateurs attendent votre validation.'}</p><a class="btn btn-ghost btn-sm" href="#/a-valider">Voir les demandes ${icon('arrow', 'i-arrow')}</a></div></div>` : ''}
     <div class="kpis">
       ${isN1 ? kpi('À valider', todo.length, 'inbox', fcfa(sum(todo)), '#/a-valider') : kpi('Mes demandes en cours', mine.filter(d => !['validee', 'rejetee', 'brouillon'].includes(d.statut)).length, 'clock', 'dans le circuit de validation', '#/demandes')}
@@ -1371,7 +1379,7 @@ function viewDashboard() {
         </div>
         <div class="list" style="margin-top:18px">
           <h3 style="margin-bottom:4px">Circuit de validation</h3>
-          ${[['pen', 'Le demandeur remplit et signe la fiche'], ['inbox', 'Le N+1 valide en signant, ou rejette avec un commentaire'], ['shield', 'Le RAF/HF complète sa partie et signe, ou retourne la fiche au N+1'], ['wallet', 'Le CFO retient la proforma, fixe le montant et signe'], ['check', 'La demande est validée'], ['lock', 'Menue dépense : fiche signée par RAF/HF, Direction Centrale, DG si ≥ 150 001 FCFA, puis visée par la Comptabilité']].map(([ic, t]) => `<div class="list-item"><div class="doc-ico">${icon(ic)}</div><div class="grow"><span style="font-size:13px;color:var(--text)">${t}</span></div></div>`).join('')}
+          ${[['pen', 'Le demandeur remplit et signe la fiche'], ['inbox', 'Le N+1 valide en signant, ou rejette avec un commentaire'], ['shield', 'Le RAF/HF complète sa partie et signe, ou retourne la fiche au N+1'], ['wallet', 'Le CFO retient la proforma, fixe le montant et signe'], ['download', 'Facilities tire la FED et effectue l\'achat sous 72 h'], ['lock', 'Menue dépense : fiche signée par RAF/HF, Direction Centrale, DG si ≥ 150 001 FCFA, puis visée par la Comptabilité']].map(([ic, t]) => `<div class="list-item"><div class="doc-ico">${icon(ic)}</div><div class="grow"><span style="font-size:13px;color:var(--text)">${t}</span></div></div>`).join('')}
         </div>
       </div>
     </div>`;
@@ -1439,7 +1447,7 @@ function viewDemande(ref) {
       if (/^pf.0$/.test(e.target.id)) $('#ePf').textContent = '';
     });
   };
-  const isAchat = can('achats') && achatPending(d);
+  const isAchat = can('achats') && achatPending(d) && d.demandeur !== session.id;
   const pdfBtn = isAchat
     ? `<button class="btn btn-ghost" onclick="downloadFed('${d.ref}')" title="Télécharger la FED validée">${icon('download')} Tirer la FED</button>`
     : `<button class="btn btn-ghost" onclick="downloadFed('${d.ref}')" title="Télécharger la fiche dans son état actuel">${icon('download')} PDF</button>`;
@@ -1695,6 +1703,7 @@ function confirmMenueSign(ref) {
     ? `La menue dépense de ${nom(d.demandeur)} est signée : elle attend votre visa.`
     : `${session.name} a signé la fiche de menues dépenses de ${nom(d.demandeur)} (${fcfa(menueMontant(d))}) : elle attend votre signature.`);
   notify(d.demandeur, ref, `Votre menue dépense a été signée par ${session.name} (${MENUE_ROLES[step]}).`);
+  if (next === 'compta') notifyFacilities(d);
   audit(`Menue dépense signée (${MENUE_ROLES[step]})`, ref);
   closeModal();
   toast(`Menue dépense ${ref} signée · transmise à ${nom(MENUE_ACTOR[next])}`);
@@ -1761,15 +1770,16 @@ function submitCompta(ref) {
    Facilities : achats à effectuer sous 72 h après validation du CFO
    ========================================================= */
 function achatCard(d) {
-  if (!d.sigCfo || d.statut === 'rejetee') return '';
-  const debut = d.sigCfo.at, fin = achatEcheance(d), f = d.achat?.fait;
+  const debut = achatDebut(d);
+  if (!debut) return '';
+  const fin = achatEcheance(d), f = d.achat?.fait;
   const ecoule = Math.min(1, Math.max(0, heuresEntre(debut, f ? f.at : new Date()) / ACHAT_DELAI_H));
   const retard = !f && heuresEntre(new Date(), fin) < 0;
   return `<div class="card achat-card">
     <div class="card-head"><h2>${icon('wallet')} Traitement de l'achat · Facilities</h2>${slaBadge(d)}</div>
     <div class="sla-track"><div class="sla-fill ${retard ? 'late' : f ? 'done' : ecoule > 2 / 3 ? 'warn' : ''}" style="width:${(ecoule * 100).toFixed(1)}%"></div></div>
     <div class="kv" style="margin-top:14px">
-      <div><span>FED validée par le CFO le</span><b>${fDateTime(debut)}</b></div>
+      <div><span>${d.type === 'menue' ? 'Fonds décaissés (fiche signée) le' : 'FED validée par le CFO le'}</span><b>${fDateTime(debut)}</b></div>
       <div><span>Échéance (72 h)</span><b>${fDateTime(fin)}</b></div>
       ${f ? `
       <div><span>Achat effectué le</span><b>${fDateTime(f.at)} · ${esc(nom(f.by))}</b></div>
@@ -1784,29 +1794,29 @@ function viewAchats() {
   const todo = DEMANDES.filter(achatPending).sort((a, b) => achatEcheance(a).localeCompare(achatEcheance(b)));
   const faits = DEMANDES.filter(d => d.achat?.fait).sort((a, b) => b.achat.fait.at.localeCompare(a.achat.fait.at));
   const rows = (list, done) => list.length ? `<div class="table-wrap"><table>
-    <thead><tr><th>Référence</th><th>Objet</th><th class="num">Montant validé</th><th>Validée par le CFO</th><th>${done ? 'Achat effectué' : 'Échéance'}</th><th>Délai</th><th></th></tr></thead>
+    <thead><tr><th>Référence</th><th>Objet</th><th class="num">Montant validé</th><th>Début du délai</th><th>${done ? 'Achat effectué' : 'Échéance'}</th><th>Délai</th><th></th></tr></thead>
     <tbody>${list.map(d => `<tr class="clickable" onclick="location.hash='#/demande/${d.ref}'">
       <td><span class="ref">${d.ref}</span></td>
       <td style="max-width:240px;overflow:hidden;text-overflow:ellipsis"><b>${esc(d.objet)}</b><div class="muted" style="font-size:12px">${TYPES[d.type]} · ${esc(nom(d.demandeur))}</div></td>
       <td class="num"><b>${fcfa(d.cfo.montant)}</b></td>
-      <td>${fDateTime(d.sigCfo.at)}</td>
+      <td>${fDateTime(achatDebut(d))}</td>
       <td>${done ? fDateTime(d.achat.fait.at) : fDateTime(achatEcheance(d))}</td>
       <td>${slaBadge(d)}</td>
       <td><button class="btn btn-ghost btn-sm" onclick="event.stopPropagation();downloadFed('${d.ref}')">${icon('download')} FED</button></td>
     </tr>`).join('')}</tbody></table></div>` : `<div class="card muted" style="text-align:center;padding:28px">${done ? 'Aucun achat effectué pour le moment.' : `${icon('check')} Aucun achat en attente.`}</div>`;
   return `
-    ${pageHead('Achats à traiter', 'FED validées par le CFO : tirez la FED, effectuez l\'achat et confirmez-le sous 72 h.')}
+    ${pageHead('Achats à traiter', 'Tirez la FED, effectuez l\'achat et confirmez-le sous 72 h : à partir de la validation du CFO (FED seule) ou du décaissement (menue dépense, fiche signée).')}
     ${rows(todo, false)}
     <h2 style="margin-top:8px">Achats effectués</h2>
     ${rows(faits.slice(0, 10), true)}`;
 }
 
-function viewDashboardFacilities() {
+function achatsSummary() {
   const todo = DEMANDES.filter(achatPending);
   const retard = todo.filter(d => heuresEntre(new Date(), achatEcheance(d)) < 0);
   const urgent = todo.filter(d => { const r = heuresEntre(new Date(), achatEcheance(d)); return r >= 0 && r < 24; });
   const faits = DEMANDES.filter(d => d.achat?.fait);
-  const delais = faits.map(d => heuresEntre(d.sigCfo.at, d.achat.fait.at));
+  const delais = faits.map(d => heuresEntre(achatDebut(d), d.achat.fait.at));
   const moyen = delais.length ? Math.round(delais.reduce((a, b) => a + b, 0) / delais.length) : 0;
   const dansDelai = delais.length ? Math.round(delais.filter(h => h <= ACHAT_DELAI_H).length / delais.length * 100) : 100;
   const kpi = (label, val, ic, sub, href) => `
@@ -1814,15 +1824,19 @@ function viewDashboardFacilities() {
       <div class="kpi-top">${label}<span class="kpi-ico">${icon(ic)}</span></div>
       <div class="kpi-val">${val}</div><div class="kpi-delta muted">${sub}</div></a>`;
   return `
-    ${pageHead(`Bonjour, ${esc(session.name.split(' ')[0])}`, `${ROLES[session.role].label} · situation au ${fDate(new Date())} à ${fTime(new Date())}.`,
-      `<a class="btn btn-primary" href="#/achats">${icon('wallet')} Achats à traiter</a>`)}
+    <div class="card-head" style="margin:4px 0 -8px"><h2>${icon('wallet')} Achats Facilities (72 h)</h2><a class="btn btn-ghost btn-sm" href="#/achats">Achats à traiter ${icon('arrow', 'i-arrow')}</a></div>
     ${retard.length ? `<div class="alert alert-danger">${icon('alert')}<div><b>${retard.length} achat${retard.length > 1 ? 's' : ''} en retard sur le délai de 72 h</b><p>Traitez-les en priorité.</p><a class="btn btn-ghost btn-sm" href="#/achats">Voir les achats ${icon('arrow', 'i-arrow')}</a></div></div>` : ''}
     <div class="kpis">
       ${kpi('Achats à traiter', todo.length, 'wallet', fcfa(todo.reduce((t, d) => t + d.cfo.montant, 0)), '#/achats')}
       ${kpi('En retard', retard.length, 'alert', 'délai de 72 h dépassé', '#/achats')}
       ${kpi('À traiter sous 24 h', urgent.length, 'clock', 'échéance proche', '#/achats')}
-      ${kpi('Délai moyen', `${moyen} h`, 'trend', `${dansDelai} % traités sous 72 h`, '#/achats')}
+      ${kpi('Délai moyen', `${moyen} h`, 'check', `${dansDelai} % traités sous 72 h`, '#/achats')}
     </div>`;
+}
+
+function notifyFacilities(d) {
+  const msg = `${d.type === 'menue' ? 'Menue dépense signée, fonds décaissés' : 'FED validée'} (${d.ref}) : achat à effectuer sous 72 h, avant le ${fDateTime(achatEcheance(d))}.`;
+  USERS.filter(u => u.service === SERVICE_ACHATS && u.actif && u.id !== d.demandeur).forEach(u => notify(u.id, d.ref, msg));
 }
 
 function openAchat(ref) {
@@ -1848,7 +1862,7 @@ function confirmAchat(ref) {
   const now = nowIso();
   d.achat = { fait: { by: session.id, at: now, fournisseur: four, montant, facture, commentaire: $('#aCom').value.trim() } };
   if (d.statut === 'achat') d.statut = 'validee';
-  const h = Math.round(heuresEntre(d.sigCfo.at, now));
+  const h = Math.round(heuresEntre(achatDebut(d), now));
   d.historique.push({ at: now, by: session.id, action: `Achat effectué par Facilities · ${fcfa(montant)} (traité en ${h} h)`, note: d.achat.fait.commentaire || undefined });
   [d.demandeur, d.n1].forEach(to => notify(to, ref, `L'achat de la demande ${ref} a été effectué par Facilities (${four}, ${fcfa(montant)}).`));
   audit(`Achat effectué (${h} h)`, ref);
@@ -1874,6 +1888,7 @@ function viewUsers() {
     </table></div>
     <div class="card">
       <div class="card-head"><h2>Matrice des droits</h2>${icon('lock')}</div>
+      <p class="hint" style="margin:-4px 0 12px">${icon('wallet')} Tirer la FED et traiter l'achat (72 h) : toutes les personnes du service ${SERVICE_ACHATS}, sauf pour leurs propres demandes.</p>
       <div class="table-wrap"><table class="matrix">
         <thead><tr><th>Permission</th>${Object.values(ROLES).map(r => `<th>${r.label}</th>`).join('')}</tr></thead>
         <tbody>${Object.entries(PERM_LABELS).map(([p, l]) => `<tr><td>${l}</td>${Object.values(ROLES).map(r => `<td>${r.perms.includes(p) ? `<span class="check">${icon('check')}</span>` : '<span class="nope">—</span>'}</td>`).join('')}</tr>`).join('')}</tbody>
@@ -2093,9 +2108,9 @@ function submitCfo(ref) {
   d.historique.push({ at: now, by: session.id, action: `Validation (2) et signature CFO · ${fcfa(montant)}`, note: d.cfo.reserve ? `Réserve : ${d.cfo.reserve}` : undefined });
   [d.demandeur, d.n1].forEach(to => notify(to, ref, `La FED ${ref} a été validée par ${session.name} (CFO) pour ${fcfa(montant)}.`));
   if (menue) notify(RAF_ID, ref, `FED ${ref} validée : la fiche de menues dépenses attend votre signature.`);
-  USERS.filter(u => u.role === 'facilities' && u.actif).forEach(u => notify(u.id, ref, `FED ${ref} validée : achat à effectuer sous 72 h (échéance le ${fDateTime(isoPlus(now, ACHAT_DELAI_H))}).`));
+  if (!menue) notifyFacilities(d);
   audit('Validation (2) CFO', ref);
-  toast(`FED ${ref} validée · achat transmis à Facilities (72 h)${menue ? ' · fiche de menues dépenses transmise au RAF/HF' : ''}`);
+  toast(`FED ${ref} validée · ${menue ? 'fiche de menues dépenses transmise au RAF/HF' : 'achat transmis à Facilities (72 h)'}`);
   render();
 }
 
@@ -2321,11 +2336,11 @@ function buildFedPdf(d) {
     }
     signs([['Signature', d.sigCfo, `En attente de ${cfo.nom} (CFO)`]]);
   }
-  if (d.sigCfo && d.statut !== 'rejetee') {
+  if (achatDebut(d)) {
     const f = d.achat?.fait;
     section('Traitement de l\'achat · Facilities (72 h)');
-    row([['FED validée par le CFO le', fDateTime(d.sigCfo.at)], ['Échéance de l\'achat', fDateTime(achatEcheance(d))]]);
-    row(f ? [['Achat effectué le', `${fDateTime(f.at)} par ${nom(f.by)} (traité en ${Math.round(heuresEntre(d.sigCfo.at, f.at))} h)`], ['Fournisseur · montant', `${f.fournisseur} · ${fcfa(f.montant)}`]]
+    row([[d.type === 'menue' ? 'Fonds décaissés (fiche signée) le' : 'FED validée par le CFO le', fDateTime(achatDebut(d))], ['Échéance de l\'achat', fDateTime(achatEcheance(d))]]);
+    row(f ? [['Achat effectué le', `${fDateTime(f.at)} par ${nom(f.by)} (traité en ${Math.round(heuresEntre(achatDebut(d), f.at))} h)`], ['Fournisseur · montant', `${f.fournisseur} · ${fcfa(f.montant)}`]]
           : [['Statut', heuresEntre(new Date(), achatEcheance(d)) < 0 ? 'À effectuer · délai dépassé' : 'À effectuer']]);
   }
 
