@@ -359,15 +359,15 @@ td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; }
   <div class="login-card">
     <div class="logo"><div class="logo-mark">F</div><div>Fin'Elle<small>par Cofina</small></div></div>
     <h1 style="margin-top:24px">Connexion</h1>
-    <p class="muted" style="margin:4px 0 0">Accès réservé aux collaborateurs.</p>
+    <p class="muted" style="margin:4px 0 0">Accès réservé aux collaborateurs. Démo : les champs sont pré-remplis, cliquez sur « Se connecter ».</p>
     <form id="loginForm" novalidate>
       <div class="field">
         <label for="email">E-mail professionnel</label>
-        <input class="input" id="email" type="email" autocomplete="username" placeholder="prenom.nom@cofina-demo.com">
+        <input class="input" id="email" type="email" autocomplete="username" placeholder="prenom.nom@cofina-demo.com" value="fatou.diallo@cofina-demo.com">
       </div>
       <div class="field">
         <label for="pwd">Mot de passe</label>
-        <input class="input" id="pwd" type="password" autocomplete="current-password" placeholder="••••••••">
+        <input class="input" id="pwd" type="password" autocomplete="current-password" placeholder="••••••••" value="demo2026">
       </div>
       <div class="field">
         <label for="role">Rôle (démo)</label>
@@ -533,7 +533,7 @@ const can = perm => session && ROLES[session.role].perms.includes(perm);
    ========================================================= */
 const $ = s => document.querySelector(s);
 $('#domainLabel').textContent = '@' + ALLOWED_DOMAIN;
-$('#role').innerHTML = Object.entries(ROLES).map(([k, r]) => `<option value="${k}">${r.label}</option>`).join('');
+$('#role').innerHTML = Object.entries(ROLES).map(([k, r]) => `<option value="${k}"${k === 'admin' ? ' selected' : ''}>${r.label}</option>`).join('');
 
 $('#loginForm').addEventListener('submit', e => {
   e.preventDefault();
