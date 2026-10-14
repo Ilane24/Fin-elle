@@ -3,6 +3,13 @@
 Maquette interactive (HTML/CSS/JS, sans dépendance) du circuit de **fiche d'engagement de dépenses** (formulaire 05SUP02V03).
 Ouvrir `maquette/index.html` dans un navigateur, puis cliquer sur « Se connecter » (champs pré-remplis).
 
+## Comptes
+- **Connexion** (e-mail du domaine + mot de passe) ou **création de compte** : identification (nom, prénom, matricule, téléphone, e-mail professionnel), compte (fonction, service, N+1, mot de passe) et option **compte menues dépenses**.
+- Une **menue dépense** n'est possible que si le demandeur a un compte menues dépenses ; l'administrateur peut l'ouvrir ou le fermer depuis « Utilisateurs & rôles ».
+
+## PDF
+Sur chaque demande, le bouton **PDF** télécharge la FED dans son état actuel (sections remplies, signatures, historique), avec un filigrane « EN COURS DE VALIDATION » tant qu'elle n'est pas validée. Accessible à tout utilisateur qui peut consulter la demande.
+
 ## Circuit
 1. Le **demandeur** remplit la fiche (date, demandeur, fonction, service, objet, référence, pro-forma oui/non, montant) et la **signe**.
 2. La fiche est transmise à son **N+1**, qui reçoit une notification.

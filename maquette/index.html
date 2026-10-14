@@ -360,6 +360,7 @@ td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; }
 .fiche-cell { padding: 12px 24px; border-bottom: 1px dashed var(--border); display: grid; gap: 4px; align-content: start; min-width: 0; transition: background var(--t) var(--ease); }
 .fiche-cell:nth-child(odd) { border-right: 1px dashed var(--border); }
 .fiche-cell.full { grid-column: 1 / -1; border-right: 0; }
+.fiche > .fiche-cell { border-right: 0; }
 .fiche-cell:hover { background: #FCFCFD; }
 .fiche-cell > span { font-size: 12px; color: var(--text-muted); font-weight: 600; }
 .fiche-cell > b { font-weight: 600; overflow-wrap: anywhere; }
@@ -441,6 +442,33 @@ td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; }
 .demo-acc .avatar { width: 28px; height: 28px; font-size: 11px; }
 .demo-acc span { font-size: 12px; color: var(--text-muted); display: block; }
 
+/* Création de compte */
+.register-card { max-width: 640px; }
+.register-card form { gap: 14px; }
+.form-part { font-size: 12px; text-transform: uppercase; letter-spacing: .06em; color: var(--text-muted); padding-bottom: 6px; border-bottom: 1px solid var(--border); margin-top: 6px; }
+.login-switch { margin: 16px 0 0; text-align: center; color: var(--text-muted); font-size: 13px; }
+.option-card {
+  display: flex; gap: 12px; align-items: flex-start; padding: 14px; border: 1px solid var(--border); border-radius: var(--radius); cursor: pointer;
+  transition: border-color var(--t) var(--ease), background var(--t) var(--ease);
+}
+.option-card:hover { border-color: var(--accent); }
+.option-card:has(input:checked) { border-color: var(--accent); background: var(--accent-soft); }
+.option-card input { accent-color: var(--accent); width: 18px; height: 18px; margin-top: 1px; flex-shrink: 0; }
+.option-card > span { display: grid; gap: 2px; }
+.option-card .muted { font-size: 12.5px; }
+.tranche.disabled { opacity: .55; cursor: not-allowed; }
+.tranche.disabled:hover { border-color: var(--border); color: inherit; }
+.hint { display: flex; gap: 6px; align-items: center; font-size: 12.5px; color: var(--text-muted); margin: 6px 0 0; }
+.hint .i { width: 14px; height: 14px; }
+/* Interrupteur */
+.switch { position: relative; display: inline-block; width: 38px; height: 22px; cursor: pointer; }
+.switch input { opacity: 0; width: 0; height: 0; position: absolute; }
+.switch span { position: absolute; inset: 0; border-radius: 999px; background: var(--surface-2); border: 1px solid var(--border); transition: background var(--t) var(--ease), border-color var(--t) var(--ease); }
+.switch span::after { content: ""; position: absolute; top: 2px; left: 2px; width: 16px; height: 16px; border-radius: 50%; background: var(--bg); box-shadow: var(--shadow-sm); transition: transform var(--t) var(--ease); }
+.switch input:checked + span { background: var(--accent); border-color: var(--accent); }
+.switch input:checked + span::after { transform: translateX(16px); }
+.switch input:focus-visible + span { box-shadow: 0 0 0 3px var(--accent-ring); }
+
 /* Partie RAF/HF */
 .fiche-signs.single { grid-template-columns: 1fr; }
 .tranches { display: flex; flex-wrap: wrap; gap: 8px; padding-top: 4px; }
@@ -497,10 +525,43 @@ label.tranche:hover { border-color: var(--accent); color: var(--accent); }
       <div class="field-error" id="loginError" role="alert"></div>
       <button class="btn btn-primary" type="submit" style="justify-content:center">Se connecter <svg class="i i-arrow"><use href="#ic-arrow"/></svg></button>
     </form>
+    <p class="login-switch">Pas encore de compte ? <button type="button" class="link-btn" id="toRegister">Créer un compte</button></p>
     <div class="login-foot muted">
       <svg class="i"><use href="#ic-shield"/></svg>
       <span>Seules les adresses <b id="domainLabel"></b> sont acceptées. Chaque connexion est enregistrée dans le journal d'audit.</span>
     </div>
+  </div>
+
+  <div class="login-card register-card hidden" id="registerCard">
+    <div class="logo"><div class="logo-mark">F</div><div>Fin'Elle<small>par Cofina</small></div></div>
+    <h1 style="margin-top:24px">Créer un compte</h1>
+    <p class="muted" style="margin:4px 0 0">Les champs marqués * sont obligatoires.</p>
+    <form id="registerForm" novalidate>
+      <h3 class="form-part">Identification</h3>
+      <div class="form-grid">
+        <div class="field"><label for="rNom">Nom *</label><input class="input" id="rNom" autocomplete="family-name" placeholder="Ex. Bamba"><div class="field-error"></div></div>
+        <div class="field"><label for="rPrenom">Prénom *</label><input class="input" id="rPrenom" autocomplete="given-name" placeholder="Ex. Aïcha"><div class="field-error"></div></div>
+        <div class="field"><label for="rMatricule">Matricule *</label><input class="input" id="rMatricule" placeholder="Ex. CF-01234"><div class="field-error"></div></div>
+        <div class="field"><label for="rTel">Téléphone</label><input class="input" id="rTel" inputmode="tel" placeholder="+225 00 00 00 00 00"><div class="field-error"></div></div>
+        <div class="field full"><label for="rEmail">E-mail professionnel *</label><input class="input" id="rEmail" type="email" autocomplete="email" placeholder="prenom.nom@cofina-demo.com"><div class="field-error"></div></div>
+      </div>
+      <h3 class="form-part">Compte</h3>
+      <div class="form-grid">
+        <div class="field"><label for="rFonction">Fonction *</label><input class="input" id="rFonction" placeholder="Ex. Assistante administrative"><div class="field-error"></div></div>
+        <div class="field"><label for="rService">Service *</label><select class="input" id="rService"></select><div class="field-error"></div></div>
+        <div class="field full"><label for="rN1">Supérieur hiérarchique (N+1) *</label><select class="input" id="rN1"></select><div class="field-error"></div></div>
+        <div class="field"><label for="rPwd">Mot de passe *</label><input class="input" id="rPwd" type="password" autocomplete="new-password" placeholder="8 caractères dont 1 chiffre"><div class="field-error"></div></div>
+        <div class="field"><label for="rPwd2">Confirmation *</label><input class="input" id="rPwd2" type="password" autocomplete="new-password" placeholder="••••••••"><div class="field-error"></div></div>
+      </div>
+      <h3 class="form-part">Option</h3>
+      <label class="option-card" for="rMenues">
+        <input type="checkbox" id="rMenues">
+        <span><b>Compte menues dépenses</b><span class="muted">Obligatoire pour effectuer une menue dépense. Sans ce compte, seules les fiches d'engagement de dépenses classiques sont possibles.</span></span>
+      </label>
+      <div class="field-error" id="registerError" role="alert"></div>
+      <button class="btn btn-primary" type="submit" style="justify-content:center">Créer mon compte <svg class="i i-arrow"><use href="#ic-arrow"/></svg></button>
+    </form>
+    <p class="login-switch">Déjà inscrit(e) ? <button type="button" class="link-btn" id="toLogin">Se connecter</button></p>
   </div>
 </section>
 
@@ -566,6 +627,7 @@ label.tranche:hover { border-color: var(--accent); color: var(--accent); }
   <symbol id="ic-alert" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 8v4M12 16h.01"/></symbol>
 </svg>
 
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <script>
 /* =========================================================
    Configuration
@@ -616,9 +678,13 @@ const USERS = [
   { id: 'binta.sow',       nom: 'Binta Sow',       fonction: 'Agente d\'accueil',         service: 'FACILITIES', role: 'demandeur', n1: 'serge.kouadio',   actif: false, derniere: '2026-08-28T16:30' },
 ];
 const userById = id => USERS.find(u => u.id === id);
+// Comptes menues dépenses ouverts (données fictives)
+USERS.forEach(u => { u.menues = ['fatou.diallo', 'ibrahim.toure', 'serge.kouadio'].includes(u.id); });
+const SERVICES = ['FACILITIES', 'ACHATS & MOYENS GÉNÉRAUX', 'FINANCE', 'DIRECTION', 'RESSOURCES HUMAINES', 'INFORMATIQUE', 'COMMERCIAL'];
+const TYPES = { engagement: 'Engagement de dépenses', menue: 'Menue dépense' };
 
 const seed = (ref, by, objet, proforma, montant, date, statut, extra = {}) => ({
-  ref, demandeur: by, n1: userById(by).n1, objet, proforma, montant, date, statut, description: '',
+  ref, type: 'engagement', demandeur: by, n1: userById(by).n1, objet, proforma, montant, date, statut, description: '',
   sigDemandeur: { by, at: date }, sigManager: null, sigRaf: null, raf: null, retourRaf: null, sigCfo: null, cfo: null, retourCfo: null, commentaire: '', pieces: proforma ? [`Proforma_${ref}.pdf`] : [],
   historique: [{ at: date, by, action: 'Fiche signée et transmise au N+1' }], ...extra,
 });
@@ -646,6 +712,7 @@ const DEMANDES = [
     sigCfo: { by: CFO_ID, at: '2026-10-08T10:12' }, cfo: { proforma: 0, montant: 980000, lettres: 'Neuf cent quatre-vingt mille francs CFA', reserve: '', date: '2026-10-08T10:12' },
   }),
   seed('FED-2026-0131', 'fatou.diallo',  'Plantes et entretien de l\'accueil',          false, 150000,  '2026-10-03T10:20', 'validee', {
+    type: 'menue',
     sigManager: { by: 'serge.kouadio', at: '2026-10-03T15:02' }, sigRaf: { by: RAF_ID, at: '2026-10-04T10:05' },
     raf: { tranche: 2, reserve: '', date: '2026-10-04T10:05', proformas: [{ fournisseur: 'Jardin d\'Ivoire', ref: 'JI-532', montant: 150000 }, { fournisseur: '', ref: '', montant: 0 }, { fournisseur: '', ref: '', montant: 0 }] },
     historique: [{ at: '2026-10-03T10:20', by: 'fatou.diallo', action: 'Fiche signée et transmise au N+1' }, { at: '2026-10-03T15:02', by: 'serge.kouadio', action: 'Validée et signée par le N+1, transmise au RAF/HF' }, { at: '2026-10-04T10:05', by: RAF_ID, action: 'Validée et signée par le RAF/HF, transmise au CFO' }, { at: '2026-10-04T16:40', by: CFO_ID, action: 'Validation (2) et signature CFO' }],
@@ -773,6 +840,62 @@ $('#demoAccounts').addEventListener('click', e => {
 });
 $('#email').addEventListener('input', renderDemoAccounts);
 renderDemoAccounts();
+
+// Création de compte
+const showRegister = on => { $('.login-card:not(.register-card)').classList.toggle('hidden', on); $('#registerCard').classList.toggle('hidden', !on); window.scrollTo(0, 0); };
+$('#toRegister').addEventListener('click', () => showRegister(true));
+$('#toLogin').addEventListener('click', () => showRegister(false));
+$('#rService').innerHTML = `<option value="">Choisir…</option>` + SERVICES.map(s => `<option>${s}</option>`).join('');
+const fillN1 = () => { $('#rN1').innerHTML = `<option value="">Choisir…</option>` + USERS.filter(u => u.actif && u.role !== 'demandeur').map(u => `<option value="${u.id}">${u.nom} – ${u.fonction}</option>`).join(''); };
+fillN1();
+$('#registerForm').addEventListener('input', e => {
+  e.target.classList.remove('invalid');
+  const err = e.target.closest('.field')?.querySelector('.field-error'); if (err) err.textContent = '';
+});
+$('#registerForm').addEventListener('submit', e => {
+  e.preventDefault();
+  const v = id => $(id).value.trim();
+  const email = v('#rEmail').toLowerCase();
+  const checks = [
+    ['#rNom', v('#rNom') ? '' : 'Saisissez votre nom.'],
+    ['#rPrenom', v('#rPrenom') ? '' : 'Saisissez votre prénom.'],
+    ['#rMatricule', v('#rMatricule') ? '' : 'Saisissez votre matricule.'],
+    ['#rEmail', !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) ? 'Saisissez une adresse e-mail valide.'
+      : email.split('@')[1] !== ALLOWED_DOMAIN ? `Utilisez votre adresse @${ALLOWED_DOMAIN}.`
+      : userById(email.split('@')[0]) ? 'Un compte existe déjà avec cette adresse.' : ''],
+    ['#rFonction', v('#rFonction') ? '' : 'Saisissez votre fonction.'],
+    ['#rService', v('#rService') ? '' : 'Choisissez votre service.'],
+    ['#rN1', v('#rN1') ? '' : 'Choisissez votre N+1.'],
+    ['#rPwd', /^(?=.*\d).{8,}$/.test($('#rPwd').value) ? '' : '8 caractères minimum, dont au moins 1 chiffre.'],
+    ['#rPwd2', $('#rPwd2').value && $('#rPwd2').value === $('#rPwd').value ? '' : 'Les deux mots de passe ne correspondent pas.'],
+  ];
+  let ok = true;
+  checks.forEach(([id, msg]) => {
+    $(id).classList.toggle('invalid', !!msg);
+    $(id).closest('.field').querySelector('.field-error').textContent = msg;
+    if (msg) ok = false;
+  });
+  if (email.split('@')[1] && email.split('@')[1] !== ALLOWED_DOMAIN)
+    AUDIT.unshift({ at: nowIso(), user: email, action: 'Création de compte refusée (domaine)', cible: '—', ip: '10.0.3.17' });
+  if (!ok) { $('#registerError').textContent = 'Corrigez les champs signalés.'; return; }
+  $('#registerError').textContent = '';
+  const cap = w => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase();
+  const u = { id: email.split('@')[0], nom: `${cap(v('#rPrenom'))} ${v('#rNom').toUpperCase()}`, fonction: v('#rFonction'), service: v('#rService'),
+    matricule: v('#rMatricule'), tel: v('#rTel'), role: 'demandeur', n1: v('#rN1'), actif: true, derniere: nowIso(), menues: $('#rMenues').checked };
+  USERS.push(u);
+  $('#profileSwitch').innerHTML = USERS.filter(x => x.actif).map(x => `<option value="${x.id}">${x.nom} – ${ROLES[x.role].label}</option>`).join('');
+  startSession(u);
+  audit('Création de compte', u.id);
+  if (u.menues) audit('Ouverture compte menues dépenses', u.id);
+  audit('Connexion');
+  $('#registerForm').reset();
+  showRegister(false);
+  $('#login').classList.add('hidden');
+  $('#app').classList.remove('hidden');
+  location.hash = '#/tableau-de-bord';
+  render();
+  toast(`Compte créé · bienvenue ${u.nom}`);
+});
 
 function startSession(u) {
   session = { id: u.id, name: u.nom, role: u.role, email: `${u.id}@${ALLOWED_DOMAIN}` };
@@ -926,7 +1049,7 @@ function demandeTable(list, empty = 'Aucune demande.') {
       <tr class="clickable" onclick="location.hash='#/demande/${d.ref}'">
         <td><span class="ref">${d.ref}</span></td>
         <td><div class="who"><div class="avatar">${initials(nom(d.demandeur))}</div><div><b>${esc(nom(d.demandeur))}</b><div class="muted" style="font-size:12px">${esc(userById(d.demandeur).fonction)}</div></div></div></td>
-        <td style="max-width:280px;overflow:hidden;text-overflow:ellipsis">${esc(d.objet)}</td>
+        <td style="max-width:300px;overflow:hidden;text-overflow:ellipsis">${d.type === 'menue' ? '<span class="badge b-neutral" style="margin-right:6px">Menue dépense</span>' : ''}${esc(d.objet)}</td>
         <td class="num"><b>${fcfa(d.montant)}</b></td>
         <td>${d.proforma ? 'Oui' : 'Non'}</td>
         <td>${badge(d.statut)}</td>
@@ -978,6 +1101,7 @@ function ficheView(d) {
     <div class="fiche">
       <div class="fiche-head"><span class="fiche-code">${FORM_CODE}</span><span class="fiche-title">Fiche d'engagement de dépenses</span><span class="ref">${d.ref}</span></div>
       <div class="fiche-section">Demandeur</div>
+      <div class="fiche-cell"><span>Type de dépense</span><b>${TYPES[d.type]}</b></div>
       <div class="fiche-grid">
         <div class="fiche-cell"><span>Date</span><b>${fDate(d.date)}</b></div>
         <div class="fiche-cell"><span>Objet</span><b>${esc(d.objet)}</b></div>
@@ -1177,13 +1301,14 @@ function viewDemande(ref) {
       if (/^pf.0$/.test(e.target.id)) $('#ePf').textContent = '';
     });
   };
-  const actions = isCfo ? `
+  const pdfBtn = `<button class="btn btn-ghost" onclick="downloadFed('${d.ref}')" title="Télécharger la fiche dans son état actuel">${icon('download')} PDF</button>`;
+  const actions = pdfBtn + (isCfo ? `
     <button class="btn btn-ghost" onclick="openReturnCfo('${d.ref}')">${icon('arrow', 'i-back')} Retourner au RAF/HF</button>
     <button class="btn btn-primary" onclick="document.getElementById('cfoForm').scrollIntoView({behavior:'smooth'})">${icon('pen')} Compléter et signer</button>` : isRaf ? `
     <button class="btn btn-ghost" onclick="openReturn('${d.ref}')">${icon('arrow', 'i-back')} Retourner au N+1</button>
     <button class="btn btn-primary" onclick="document.getElementById('rafForm').scrollIntoView({behavior:'smooth'})">${icon('pen')} Compléter et signer</button>` : isN1 ? `
     <button class="btn btn-ghost" onclick="openReject('${d.ref}')">${icon('x')} Rejeter</button>
-    <button class="btn btn-primary" onclick="openValidate('${d.ref}')">${icon('pen')} Valider et signer</button>` : '';
+    <button class="btn btn-primary" onclick="openValidate('${d.ref}')">${icon('pen')} Valider et signer</button>` : '');
   let banner = '';
   if (d.statut === 'rejetee') banner = `<div class="alert alert-danger">${icon('message')}<div><b>Demande rejetée par ${esc(nom(d.n1))}</b><p>« ${esc(d.commentaire)} »</p>${isOwner ? `<a class="btn btn-ghost btn-sm" href="#/nouvelle-demande/${d.ref}">${icon('pen')} Corriger et renvoyer</a>` : ''}</div></div>`;
   else if (d.statut === 'validee') banner = `<div class="alert alert-success">${icon('check')}<div><b>Demande validée pour ${fcfa(d.cfo.montant)}</b><p>Signée par ${esc(nom(d.n1))} (N+1), ${esc(nom(RAF_ID))} (RAF/HF) puis ${esc(nom(CFO_ID))} (CFO) le ${fDate(d.sigCfo.at)} à ${fTime(d.sigCfo.at)}.</p></div></div>`;
@@ -1239,6 +1364,13 @@ function viewNouvelle(ref) {
     <form class="fiche" id="ficheForm" novalidate>
       <div class="fiche-head"><span class="fiche-code">${FORM_CODE}</span><span class="fiche-title">Fiche d'engagement de dépenses</span><span class="ref">${draftRef}</span></div>
       <div class="fiche-section">Demandeur</div>
+      <div class="fiche-cell"><span>Type de dépense *</span>
+          <div class="tranches">
+            <label class="tranche"><input type="radio" name="ftype" value="engagement" ${(src?.type ?? 'engagement') === 'engagement' ? 'checked' : ''}>${TYPES.engagement}</label>
+            <label class="tranche ${me.menues ? '' : 'disabled'}" title="${me.menues ? '' : 'Nécessite un compte menues dépenses'}"><input type="radio" name="ftype" value="menue" ${me.menues ? '' : 'disabled'} ${src?.type === 'menue' && me.menues ? 'checked' : ''}>${TYPES.menue}${me.menues ? '' : ` ${icon('lock')}`}</label>
+          </div>
+          ${me.menues ? '' : `<p class="hint">${icon('lock')} Vous n'avez pas de compte menues dépenses : demandez son ouverture à l'administrateur pour effectuer une menue dépense.</p>`}
+          <div class="field-error" id="eType"></div></div>
       <div class="fiche-grid">
         <div class="fiche-cell"><span>Date</span><b>${fDate(new Date())}</b></div>
         <div class="fiche-cell"><label for="fObjet" style="font-size:12px;color:var(--text-muted);font-weight:600">Objet *</label><input class="input" id="fObjet" value="${esc(src?.objet ?? '')}" placeholder="Ex. Remplacement des néons du hall"><div class="field-error" id="eObjet"></div></div>
@@ -1272,13 +1404,14 @@ function viewUsers() {
   return `
     ${pageHead('Utilisateurs & rôles', `Accès limité aux adresses @${ALLOWED_DOMAIN}. Le N+1 reçoit les demandes à valider.`, `<button class="btn btn-primary" onclick="toast('Invitation envoyée (démo)'); audit('Invitation utilisateur')">${icon('plus', 'i-plus')} Inviter</button>`)}
     <div class="table-wrap"><table>
-      <thead><tr><th>Utilisateur</th><th>E-mail</th><th>Fonction</th><th>Service</th><th>Rôle</th><th>N+1</th><th>Statut</th><th>Dernière connexion</th></tr></thead>
+      <thead><tr><th>Utilisateur</th><th>E-mail</th><th>Fonction</th><th>Service</th><th>Rôle</th><th>N+1</th><th>Menues dépenses</th><th>Statut</th><th>Dernière connexion</th></tr></thead>
       <tbody>${USERS.map(u => `<tr>
         <td><div class="who"><div class="avatar">${initials(u.nom)}</div><b>${esc(u.nom)}</b></div></td>
         <td class="muted">${u.id}@${ALLOWED_DOMAIN}</td>
         <td>${esc(u.fonction)}</td><td>${u.service}</td>
         <td>${ROLES[u.role].label}</td>
         <td>${u.n1 ? esc(nom(u.n1)) : '<span class="muted">—</span>'}</td>
+        <td><label class="switch" title="Compte menues dépenses"><input type="checkbox" ${u.menues ? 'checked' : ''} onchange="toggleMenues('${u.id}', this.checked)"><span></span></label></td>
         <td>${u.actif ? '<span class="badge b-success">Actif</span>' : '<span class="badge b-neutral">Désactivé</span>'}</td>
         <td>${fDateTime(u.derniere)}</td></tr>`).join('')}</tbody>
     </table></div>
@@ -1332,8 +1465,11 @@ function submitFiche(resubmitRef) {
   const pf = document.querySelector('input[name=proforma]:checked');
   const montant = Number($('#fMontant').value.replace(/\D/g, ''));
   const sigPad = $('#padDemandeur');
+  const type = document.querySelector('input[name=ftype]:checked')?.value;
   let ok = true;
   const setErr = (id, msg, el) => { $(id).textContent = msg; if (el) el.classList.toggle('invalid', !!msg); if (msg) ok = false; };
+  // Contrôle côté serveur dans l'appli réelle : une menue dépense exige un compte menues dépenses
+  setErr('#eType', !type ? 'Choisissez le type de dépense.' : type === 'menue' && !userById(session.id).menues ? 'Une menue dépense nécessite un compte menues dépenses.' : '');
   setErr('#eObjet', objet.length < 5 ? "Décrivez l'objet de la dépense (5 caractères minimum)." : '', $('#fObjet'));
   setErr('#eProforma', pf ? '' : 'Indiquez si une pro-forma est jointe.');
   setErr('#eMontant', montant > 0 ? '' : 'Saisissez le montant estimé en FCFA.', $('#fMontant'));
@@ -1348,11 +1484,11 @@ function submitFiche(resubmitRef) {
   let d;
   if (resubmitRef) {
     d = DEMANDES.find(x => x.ref === resubmitRef);
-    Object.assign(d, { objet, proforma: pf.value === 'oui', montant, description: $('#fDesc').value.trim(), date: now, statut: 'attente', sigDemandeur: sig, sigManager: null, sigRaf: null, raf: null, retourRaf: null, sigCfo: null, cfo: null, retourCfo: null, commentaire: '', pieces });
+    Object.assign(d, { type, objet, proforma: pf.value === 'oui', montant, description: $('#fDesc').value.trim(), date: now, statut: 'attente', sigDemandeur: sig, sigManager: null, sigRaf: null, raf: null, retourRaf: null, sigCfo: null, cfo: null, retourCfo: null, commentaire: '', pieces });
     d.historique.push({ at: now, by: session.id, action: 'Fiche corrigée, signée et renvoyée au N+1' });
   } else {
     const ref = `FED-2026-${String(nextRef++).padStart(4, '0')}`;
-    d = { ref, demandeur: session.id, n1: me.n1, objet, proforma: pf.value === 'oui', montant, description: $('#fDesc').value.trim(), date: now, statut: 'attente',
+    d = { ref, type, demandeur: session.id, n1: me.n1, objet, proforma: pf.value === 'oui', montant, description: $('#fDesc').value.trim(), date: now, statut: 'attente',
           sigDemandeur: sig, sigManager: null, sigRaf: null, raf: null, retourRaf: null, sigCfo: null, cfo: null, retourCfo: null, commentaire: '', pieces: pieces.map(p => p.replace('jointe', ref)), historique: [{ at: now, by: session.id, action: 'Fiche signée et transmise au N+1' }] };
     DEMANDES.unshift(d);
   }
@@ -1523,6 +1659,167 @@ function confirmReturnCfo(ref) {
   closeModal();
   toast(`Demande ${ref} retournée à ${nom(RAF_ID)}`);
   render();
+}
+
+function toggleMenues(id, on) {
+  const u = userById(id);
+  u.menues = on;
+  audit(on ? 'Ouverture compte menues dépenses' : 'Fermeture compte menues dépenses', id);
+  toast(`Compte menues dépenses ${on ? 'ouvert' : 'fermé'} pour ${u.nom}`);
+}
+
+/* =========================================================
+   Export PDF de la FED, dans son état actuel
+   ========================================================= */
+async function downloadFed(ref) {
+  const d = DEMANDES.find(x => x.ref === ref);
+  if (!window.jspdf) { toast('Génération PDF indisponible (connexion requise)'); return; }
+  const doc = buildFedPdf(d);
+  const filename = `${d.ref}.pdf`;
+  audit('Export PDF', d.ref);
+  let downloads = null;
+  try { downloads = window.claude?.use ? await window.claude.use('downloads') : null; } catch { downloads = null; }
+  if (!downloads) { doc.save(filename); toast(`${filename} téléchargé`); return; }
+  try {
+    await downloads.save({ filename, data: doc.output('blob') });
+    toast(`${filename} enregistré`);
+  } catch (e) {
+    if (e?.code === 'declined') return;
+    toast(e?.code === 'rate_limited' ? 'Un téléchargement est déjà en cours.' : 'Le téléchargement n\'est pas disponible ici.');
+  }
+}
+
+function buildFedPdf(d) {
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF({ unit: 'mm', format: 'a4' });
+  const W = 210, M = 14, CW = W - 2 * M, BOTTOM = 282;
+  const ACCENT = [214, 51, 108], TEXT = [47, 52, 55], MUTED = [107, 113, 120], LINE = [200, 204, 210];
+  let y = 14;
+  const u = userById(d.demandeur);
+  const room = h => { if (y + h > BOTTOM) { doc.addPage(); y = 16; } };
+
+  // Filigrane tant que la fiche n'est pas entièrement validée
+  const watermark = () => {
+    if (d.statut === 'validee') return;
+    doc.saveGraphicsState(); doc.setGState(new doc.GState({ opacity: 0.08 }));
+    doc.setFont('helvetica', 'bold'); doc.setFontSize(46); doc.setTextColor(...ACCENT);
+    doc.text(d.statut === 'rejetee' ? 'REJETÉE' : 'EN COURS DE VALIDATION', W / 2, 160, { align: 'center', angle: 35 });
+    doc.restoreGraphicsState();
+  };
+
+  // En-tête
+  doc.setFont('helvetica', 'bolditalic'); doc.setFontSize(9); doc.setTextColor(...MUTED); doc.text(FORM_CODE, M, y + 4);
+  doc.setFont('helvetica', 'bold'); doc.setFontSize(14); doc.setTextColor(...TEXT); doc.text("FICHE D'ENGAGEMENT DE DÉPENSES", W / 2, y + 4, { align: 'center' });
+  doc.setFont('courier', 'normal'); doc.setFontSize(9); doc.setTextColor(...MUTED); doc.text(d.ref, W - M, y + 4, { align: 'right' });
+  y += 8; doc.setFillColor(...ACCENT); doc.rect(M, y, CW, 1.2, 'F'); y += 5;
+  doc.setFont('helvetica', 'normal'); doc.setFontSize(8.5); doc.setTextColor(...MUTED);
+  doc.text(`État : ${STATUS[d.statut][0]} · édité le ${fDate(new Date())} à ${fTime(new Date())} par ${session.name}`, M, y); y += 5;
+
+  const section = title => {
+    room(16);
+    doc.setDrawColor(...TEXT); doc.setLineWidth(0.5); doc.line(M, y, M + CW, y);
+    doc.setFillColor(243, 244, 246); doc.rect(M, y + 0.3, CW, 7, 'F');
+    doc.setFont('helvetica', 'bold'); doc.setFontSize(9); doc.setTextColor(...TEXT);
+    doc.text(title.toUpperCase(), W / 2, y + 5, { align: 'center' }); y += 7.3;
+  };
+  // Ligne de champs : cols = [[libellé, valeur], ...] répartis sur la largeur
+  const row = cols => {
+    const cw = CW / cols.length;
+    doc.setFont('helvetica', 'bold'); doc.setFontSize(9.5);
+    const lines = cols.map(([, v]) => doc.splitTextToSize(String(v || '—'), cw - 6));
+    const h = 7 + Math.max(...lines.map(l => l.length)) * 4.3;
+    room(h);
+    cols.forEach(([label], i) => {
+      const x = M + i * cw + 3;
+      doc.setFont('helvetica', 'normal'); doc.setFontSize(7.5); doc.setTextColor(...MUTED); doc.text(label, x, y + 4);
+      doc.setFont('helvetica', 'bold'); doc.setFontSize(9.5); doc.setTextColor(...TEXT); doc.text(lines[i], x, y + 8.5);
+      if (i) { doc.setDrawColor(...LINE); doc.setLineWidth(0.2); doc.setLineDashPattern([0.8, 0.8], 0); doc.line(M + i * cw, y, M + i * cw, y + h); }
+    });
+    doc.setDrawColor(...LINE); doc.setLineWidth(0.2); doc.setLineDashPattern([0.8, 0.8], 0); doc.line(M, y + h, M + CW, y + h); doc.setLineDashPattern([], 0);
+    y += h;
+  };
+  // Cases de signature
+  const signs = boxes => {
+    const h = 34; room(h + 2);
+    const bw = CW / boxes.length;
+    doc.setDrawColor(...TEXT); doc.setLineWidth(0.5); doc.line(M, y, M + CW, y);
+    boxes.forEach(([title, sig, waiting], i) => {
+      const x = M + i * bw;
+      if (i) doc.line(x, y, x, y + h);
+      doc.setFont('helvetica', 'bold'); doc.setFontSize(8.5); doc.setTextColor(...TEXT); doc.text(title, x + bw / 2, y + 5, { align: 'center' });
+      if (sig) {
+        const img = sig.img || sigFromName(sig.by);
+        const pr = doc.getImageProperties(img);
+        const maxW = Math.min(bw - 16, 60), maxH = 18;
+        const k = Math.min(maxW / pr.width, maxH / pr.height);
+        doc.addImage(img, 'PNG', x + (bw - pr.width * k) / 2, y + 7 + (maxH - pr.height * k) / 2, pr.width * k, pr.height * k);
+        doc.setFont('helvetica', 'normal'); doc.setFontSize(7.5); doc.setTextColor(...MUTED);
+        doc.text(`${nom(sig.by)} · ${fDate(sig.at)} à ${fTime(sig.at)}`, x + bw / 2, y + h - 3, { align: 'center' });
+      } else {
+        doc.setFont('helvetica', 'italic'); doc.setFontSize(8.5); doc.setTextColor(...MUTED);
+        doc.text(waiting, x + bw / 2, y + h / 2 + 2, { align: 'center' });
+      }
+    });
+    y += h; doc.setDrawColor(...TEXT); doc.setLineWidth(0.5); doc.line(M, y, M + CW, y); y += 3;
+  };
+
+  section('Demandeur');
+  row([['Type de dépense', TYPES[d.type]]]);
+  row([['Date', fDate(d.date)], ['Objet', d.objet]]);
+  row([['Demandeur', u.nom], ['Service', u.service]]);
+  row([['Fonction', u.fonction], ['Référence N°', d.ref]]);
+  row([['Pro-forma', d.proforma ? `Oui${d.pieces.length ? ' · ' + d.pieces[0] : ''}` : 'Non'], ['Montant estimé', fcfa(d.montant)]]);
+  if (d.description) row([['Précisions', d.description]]);
+  signs([
+    ['Signature Demandeur', d.sigDemandeur, 'Non signée'],
+    ['Signature Manager', d.sigManager, d.statut === 'rejetee' ? `Rejetée par ${nom(d.n1)}` : `En attente de ${nom(d.n1)}`],
+  ]);
+  if (d.statut === 'rejetee' && d.commentaire) row([['Motif du rejet', d.commentaire]]);
+
+  if (d.raf || d.statut === 'raf') {
+    const raf = userById(RAF_ID), r = d.raf;
+    section('Validation (1) de la demande par RAF/HF');
+    row([['Fonction', raf.fonction.toUpperCase()], ['Nom-Prénom', raf.nom.toUpperCase()]]);
+    if (r && d.sigRaf) {
+      row([['Montant achat', TRANCHES.map((t, i) => `${i === r.tranche ? '[X]' : '[  ]'} ${t}`).join('    ')]]);
+      r.proformas.forEach((pf, i) => row([[`Proforma ${i + 1}`, pf.fournisseur], ['Réf N°', pf.ref], ['Montant', pf.montant ? fcfa(pf.montant) : '— FCFA']]));
+      row([['Réserve', r.reserve], ['Date', fDate(r.date)]]);
+    }
+    signs([['Signature', d.sigRaf, `En attente de ${raf.nom} (RAF/HF)`]]);
+  }
+  if (d.cfo || d.statut === 'cfo') {
+    const cfo = userById(CFO_ID), c = d.cfo;
+    section('Validation (2) de la demande par CFO');
+    row([['Fonction', cfo.fonction.toUpperCase()], ['Nom-Prénom', cfo.nom.toUpperCase()]]);
+    if (c && d.sigCfo) {
+      const pf = d.raf.proformas[c.proforma];
+      row([['Proforma retenue', `Proforma ${c.proforma + 1} – ${pf.fournisseur}${pf.ref ? ' (Réf. ' + pf.ref + ')' : ''}`]]);
+      row([['Montant en chiffre', fcfa(c.montant)]]);
+      row([['Montant en lettre', c.lettres]]);
+      row([['Réserve', c.reserve], ['Date', fDate(c.date)]]);
+    }
+    signs([['Signature', d.sigCfo, `En attente de ${cfo.nom} (CFO)`]]);
+  }
+
+  // Historique
+  room(14); y += 2;
+  doc.setFont('helvetica', 'bold'); doc.setFontSize(10); doc.setTextColor(...TEXT); doc.text('Historique', M, y + 4); y += 7;
+  d.historique.forEach(h => {
+    const txt = doc.splitTextToSize(`${fDateTime(h.at)} · ${nom(h.by)} · ${h.action}${h.note ? ' — « ' + h.note + ' »' : ''}`, CW - 4);
+    room(txt.length * 4 + 1);
+    doc.setFont('helvetica', 'normal'); doc.setFontSize(8.5); doc.setTextColor(...TEXT); doc.text(txt, M + 2, y + 3);
+    y += txt.length * 4 + 1;
+  });
+
+  // Pied de page et filigrane sur chaque page
+  const pages = doc.getNumberOfPages();
+  for (let i = 1; i <= pages; i++) {
+    doc.setPage(i); watermark();
+    doc.setFont('helvetica', 'normal'); doc.setFontSize(7.5); doc.setTextColor(...MUTED);
+    doc.text(`Fin'Elle · Cofina · ${d.ref} · Maquette – données fictives`, M, 290);
+    doc.text(`Page ${i}/${pages}`, W - M, 290, { align: 'right' });
+  }
+  return doc;
 }
 </script>
 </body>
