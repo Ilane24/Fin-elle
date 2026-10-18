@@ -518,6 +518,26 @@ td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; }
   .fiche-signs.three .fiche-sign + .fiche-sign { border-left: 0; border-top: 2px solid var(--text); }
 }
 
+/* Signature électronique et verrouillage */
+.lock-line { display: flex; gap: 6px; align-items: flex-start; justify-content: center; font-size: 11.5px; color: var(--success); margin-top: 4px; text-align: left; }
+.lock-line .i { width: 13px; height: 13px; margin-top: 1px; flex-shrink: 0; }
+.lock-line code, .sig-item code { font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace; font-size: 11px; }
+.lock-line.bad { color: var(--danger); font-weight: 600; }
+.sig-table .lock-line { justify-content: flex-start; }
+.level-form { display: grid; gap: 10px; padding: 14px; border: 1.5px solid var(--accent); border-radius: var(--radius); background: var(--bg); box-shadow: 0 0 0 4px var(--accent-soft); }
+.level-form h3 { font-size: 13px; }
+.certify { display: flex; gap: 10px; align-items: flex-start; font-size: 12.5px; line-height: 1.45; cursor: pointer; padding: 10px 12px; border-radius: var(--radius-sm); background: var(--surface); border: 1px solid var(--border); transition: border-color var(--t) var(--ease); }
+.certify:hover { border-color: var(--accent); }
+.certify:has(input:checked) { border-color: var(--success); background: var(--success-soft); }
+.certify input { accent-color: var(--accent); width: 16px; height: 16px; margin-top: 1px; flex-shrink: 0; }
+.fiche-sign .certify { margin-top: 6px; }
+.sig-list { display: grid; gap: 8px; }
+.sig-item { display: grid; grid-template-columns: 18px 1fr; gap: 8px; align-items: start; font-size: 13px; padding: 8px 10px; border-radius: var(--radius-sm); background: var(--bg); border: 1px solid var(--border); transition: border-color var(--t) var(--ease); }
+.sig-item:hover { border-color: var(--success); }
+.sig-item .i { width: 15px; height: 15px; color: var(--success); margin-top: 2px; }
+.sig-item small { display: block; color: var(--text-muted); font-size: 12px; }
+.sig-item.bad .i { color: var(--danger); }
+
 /* Partie RAF/HF */
 .fiche-signs.single { grid-template-columns: 1fr; }
 .tranches { display: flex; flex-wrap: wrap; gap: 8px; padding-top: 4px; }
@@ -1061,6 +1081,7 @@ $('#registerForm').addEventListener('submit', e => {
 });
 
 function startSession(u) {
+  if (!startSession.sealed) { sealAll(); startSession.sealed = true; }
   session = { id: u.id, name: u.nom, role: u.role, email: `${u.id}@${ALLOWED_DOMAIN}` };
   $('#meName').textContent = u.nom;
   $('#meRole').textContent = `${ROLES[u.role].label} · ${u.service}`;
@@ -1250,18 +1271,129 @@ const padHtml = (id, hint) => `
   <div class="pad-wrap"><canvas class="pad" id="${id}"></canvas><div class="pad-hint">${icon('pen')}&nbsp;${hint}</div></div>
   <div class="pad-actions"><span class="muted">Signez avec la souris ou le doigt.</span><button type="button" class="link-btn" onclick="document.getElementById('${id}').clear()">Effacer</button></div>`;
 
-function signatureBlock(sig, waitingFor) {
+/* =========================================================
+   Signature électronique : chaque niveau signe son propre formulaire.
+   À la signature, le contenu du formulaire est scellé par une empreinte SHA-256
+   (contenu + signataire + horodatage). Un formulaire signé est verrouillé :
+   l'empreinte est revérifiée à chaque affichage. Une correction après retour
+   ou rejet crée une nouvelle version ; l'ancienne reste archivée et verrouillée.
+   ========================================================= */
+function sha256(str) {
+  const rotr = (x, n) => (x >>> n) | (x << (32 - n));
+  const K = [], H = [];
+  const isPrime = m => { for (let f = 2; f * f <= m; f++) if (m % f === 0) return false; return true; };
+  const frac = x => ((x - Math.floor(x)) * 0x100000000) | 0;
+  for (let n = 2, found = 0; found < 64; n++) if (isPrime(n)) { if (found < 8) H[found] = frac(Math.pow(n, 1 / 2)); K[found++] = frac(Math.pow(n, 1 / 3)); }
+  const bytes = new TextEncoder().encode(str), l = bytes.length;
+  const words = new Array((((l + 8) >> 6) + 1) * 16).fill(0);
+  for (let i = 0; i < l; i++) words[i >> 2] |= bytes[i] << (24 - (i % 4) * 8);
+  words[l >> 2] |= 0x80 << (24 - (l % 4) * 8);
+  words[words.length - 1] = l * 8;
+  for (let j = 0; j < words.length; j += 16) {
+    const w = words.slice(j, j + 16);
+    let [a, b, c, d, e, f, g, h] = H;
+    for (let i = 0; i < 64; i++) {
+      if (i >= 16) { const x = w[i - 15], y = w[i - 2]; w[i] = (w[i - 16] + (rotr(x, 7) ^ rotr(x, 18) ^ (x >>> 3)) + w[i - 7] + (rotr(y, 17) ^ rotr(y, 19) ^ (y >>> 10))) | 0; }
+      const t1 = (h + (rotr(e, 6) ^ rotr(e, 11) ^ rotr(e, 25)) + ((e & f) ^ (~e & g)) + K[i] + w[i]) | 0;
+      const t2 = ((rotr(a, 2) ^ rotr(a, 13) ^ rotr(a, 22)) + ((a & b) ^ (a & c) ^ (b & c))) | 0;
+      h = g; g = f; f = e; e = (d + t1) | 0; d = c; c = b; b = a; a = (t1 + t2) | 0;
+    }
+    [a, b, c, d, e, f, g, h].forEach((v, i) => { H[i] = (H[i] + v) | 0; });
+  }
+  return H.map(x => (x >>> 0).toString(16).padStart(8, '0')).join('');
+}
+
+// Les formulaires du circuit, chacun avec son signataire
+const LEVELS = {
+  demandeur: 'FED · partie Demandeur', manager: 'FED · validation N+1', raf: 'FED · validation (1) RAF/HF', cfo: 'FED · validation (2) CFO',
+  md_raf: 'Menue dépense · RAF/HF', md_dc: 'Menue dépense · Direction Centrale', md_dg: 'Menue dépense · Direction Générale',
+  compta: 'Menue dépense · visa Comptabilité', bc: 'Bon de commande · Comptabilité', achat: 'Achat · Facilities',
+};
+const pick = (o, keys) => Object.fromEntries(keys.map(k => [k, o?.[k] ?? null]));
+function sigOf(d, level) {
+  return { demandeur: d.sigDemandeur, manager: d.sigManager, raf: d.sigRaf, cfo: d.sigCfo, md_raf: d.sigs?.raf, md_dc: d.sigs?.dc, md_dg: d.sigs?.dg,
+    compta: d.sigs?.compta, bc: d.bcDoc?.delivre, achat: d.achat?.fait }[level] || null;
+}
+// Contenu scellé par niveau : ce que le signataire a rempli dans son formulaire
+function levelData(d, level, sig = sigOf(d, level)) {
+  switch (level) {
+    case 'demandeur': return pick(d, ['type', 'objet', 'montant', 'proforma', 'description', 'pieces']);
+    case 'raf': return d.raf;
+    case 'cfo': return d.cfo;
+    case 'compta': return d.compta;
+    case 'bc': return d.bcDoc && pick(d.bcDoc, ['numero', 'fournisseur', 'adresse', 'reference', 'tel', 'email', 'lignes', 'total', 'lettres', 'paiement']);
+    case 'achat': return pick(sig, ['fournisseur', 'montant', 'facture', 'commentaire']);
+    default: return { decision: 'Validée', commentaire: sig?.note || '', montant: level.startsWith('md_') ? (d.cfo?.montant ?? d.montant) : d.montant };
+  }
+}
+// Empreinte : référence, niveau, version, contenu du formulaire, signataire, horodatage à la milliseconde, signature manuscrite
+const hashFor = (d, level, sig, data = levelData(d, level, sig)) =>
+  sha256(JSON.stringify({ ref: d.ref, level, v: sig.v, data, by: sig.by, at: sig.at, ts: sig.ts, img: sig.img || '' }));
+function seal(d, level, live = true) {
+  const sig = sigOf(d, level);
+  if (!sig) return null;
+  if (live && !sig.ts) sig.ts = Date.now();
+  Object.assign(sig, { ts: sig.ts || Date.parse(sig.at) || Date.now(), v: sig.v || versionOf(d, level), ip: sig.ip || '10.0.3.17', level });
+  sig.hash = hashFor(d, level, sig);
+  return sig;
+}
+const verify = (d, level) => { const sig = sigOf(d, level); return !!sig?.hash && sig.hash === hashFor(d, level, sig); };
+// Archive une version signée avant qu'un retour ou un rejet ne rouvre le niveau
+function archive(d, level, motif) {
+  const sig = sigOf(d, level);
+  if (!sig) return;
+  d.archives = d.archives || [];
+  const version = d.archives.filter(a => a.level === level).length + 1;
+  d.archives.push({ level, version, motif, at: nowIso(), sig: { ...sig }, data: JSON.parse(JSON.stringify(levelData(d, level, sig) ?? null)) });
+}
+const versionOf = (d, level) => sigOf(d, level)?.v || (d.archives || []).filter(a => a.level === level).length + 1;
+function sealAll() {
+  DEMANDES.forEach(d => Object.keys(LEVELS).forEach(l => { const sg = sigOf(d, l); if (sg && !sg.hash) seal(d, l, false); }));
+}
+// Ligne « verrouillé » affichée sous chaque formulaire signé
+function lockLine(d, level) {
+  const sig = sigOf(d, level);
+  if (!sig?.hash) return '';
+  const ok = verify(d, level), v = versionOf(d, level);
+  return `<div class="lock-line ${ok ? '' : 'bad'}" title="Empreinte SHA-256 : ${sig.hash}">${icon('lock')}<span>Signé électroniquement et verrouillé${v > 1 ? ` · version ${v}` : ''} · empreinte <code>${sig.hash.slice(0, 8)}…${sig.hash.slice(-4)}</code> · ${ok ? 'intégrité vérifiée' : 'modifié après signature !'}</span></div>`;
+}
+const certifyHtml = id => `<label class="certify"><input type="checkbox" id="${id}"><span>Je certifie l'exactitude des informations de ce formulaire et je le signe électroniquement. Une fois signé, il est verrouillé et ne peut plus être modifié.</span></label><div class="field-error" id="${id}Err"></div>`;
+function checkCertify(id) {
+  const ok = !!$('#' + id)?.checked;
+  $('#' + id + 'Err').textContent = ok ? '' : 'Cochez la case pour signer électroniquement.';
+  return ok;
+}
+
+function signatureBlock(sig, waitingFor, d, level) {
   if (sig) return `<div class="sign-box"><img src="${sig.img || sigFromName(sig.by)}" alt="Signature de ${esc(nom(sig.by))}"></div>
-    <div class="sign-meta">${esc(nom(sig.by))} · ${fDate(sig.at)} à ${fTime(sig.at)}</div>`;
+    <div class="sign-meta">${esc(nom(sig.by))} · ${fDate(sig.at)} à ${fTime(sig.at)}</div>${d ? lockLine(d, level) : ''}`;
   return `<div class="sign-box">${waitingFor}</div><div class="sign-meta">&nbsp;</div>`;
+}
+
+/* Formulaire du N+1 : décision, commentaire, signature */
+function n1FormHtml(d) {
+  return `<div class="level-form" id="n1Form">
+    <div class="radio-row"><label><input type="radio" name="n1dec" value="ok" checked onchange="n1Dec()"> Valider</label><label><input type="radio" name="n1dec" value="ko" onchange="n1Dec()"> Rejeter</label></div>
+    <textarea class="input" id="n1Com" rows="2" placeholder="Commentaire (obligatoire en cas de rejet, visible par ${esc(nom(d.demandeur))})"></textarea><div class="field-error" id="eN1Com"></div>
+    <div id="n1PadWrap">${padHtml('padManager', 'Signez ici pour valider')}<div class="field-error" id="eSigM"></div></div>
+    ${certifyHtml('n1Cert')}
+    <button class="btn btn-success" id="n1Submit" style="justify-content:center" onclick="submitN1('${d.ref}')">${icon('check')} Signer et valider</button>
+  </div>`;
+}
+function n1Dec() {
+  const ko = document.querySelector('input[name=n1dec]:checked').value === 'ko';
+  $('#n1PadWrap').classList.toggle('hidden', ko);
+  $('#n1Submit').className = 'btn ' + (ko ? 'btn-danger' : 'btn-success');
+  $('#n1Submit').innerHTML = ko ? `${icon('x')} Signer le rejet et notifier` : `${icon('check')} Signer et valider`;
 }
 
 /* La fiche, au format du formulaire papier 05SUP02V03 */
 function ficheView(d) {
   const u = userById(d.demandeur);
-  const managerBox = d.statut === 'rejetee'
-    ? `<div class="sign-box" style="color:var(--danger)">${icon('x')}&nbsp;Rejetée par ${esc(nom(d.n1))}</div><div class="sign-meta">&nbsp;</div>`
-    : signatureBlock(d.sigManager, `${icon('clock')}&nbsp;En attente de ${esc(nom(d.n1))}`);
+  const managerBox = d.statut === 'attente' && session.id === d.n1 ? n1FormHtml(d)
+    : d.statut === 'rejetee' && d.rejetEtape === 'attente'
+    ? `<div class="sign-box" style="color:var(--danger)">${icon('x')}&nbsp;Rejetée par ${esc(nom(d.rejetPar || d.n1))}</div><div class="sign-meta">&nbsp;</div>`
+    : signatureBlock(d.sigManager, `${icon('clock')}&nbsp;En attente de ${esc(nom(d.n1))}`, d, 'manager');
   return `
     <div class="fiche">
       <div class="fiche-head"><span class="fiche-code">${FORM_CODE}</span><span class="fiche-title">Fiche d'engagement de dépenses</span><span class="ref">${d.ref}</span></div>
@@ -1278,8 +1410,8 @@ function ficheView(d) {
         ${d.description ? `<div class="fiche-cell full"><span>Précisions</span><b style="font-weight:500">${esc(d.description)}</b></div>` : ''}
       </div>
       <div class="fiche-signs">
-        <div class="fiche-sign"><h3>Signature Demandeur</h3>${signatureBlock(d.sigDemandeur, 'Non signée')}</div>
-        <div class="fiche-sign"><h3>Signature Manager</h3>${managerBox}</div>
+        <div class="fiche-sign"><h3>Signature Demandeur</h3>${signatureBlock(d.sigDemandeur, 'Non signée', d, 'demandeur')}</div>
+        <div class="fiche-sign"><h3>${d.statut === 'attente' && session.id === d.n1 ? 'Votre validation (N+1) *' : 'Signature Manager'}</h3>${managerBox}</div>
       </div>
       ${rafSection(d)}
       ${cfoSection(d)}
@@ -1307,7 +1439,7 @@ function cfoSection(d) {
       <div class="fiche-cell full"><span>Réserve</span><b style="font-weight:500">${esc(c.reserve) || '—'}</b></div>
       <div class="fiche-cell full"><span>Date</span><b>${fDate(c.date)}</b></div>
     </div>
-    <div class="fiche-signs single"><div class="fiche-sign"><h3>Signature</h3>${signatureBlock(d.sigCfo, '')}</div></div>`;
+    <div class="fiche-signs single"><div class="fiche-sign"><h3>Signature</h3>${signatureBlock(d.sigCfo, '', d, 'cfo')}</div></div>`;
   }
   const options = d.raf.proformas.map((p, i) => p.fournisseur && p.montant ? `<option value="${i}" data-montant="${p.montant}">${esc(pfLabel(i))} – ${fcfa(p.montant)}</option>` : '').join('');
   return `${head}<div class="fiche-grid" id="cfoForm">${ident}
@@ -1323,7 +1455,7 @@ function cfoSection(d) {
       <div class="fiche-cell full"><label for="cfoReserve">Réserve</label><textarea class="input" id="cfoReserve" rows="2" placeholder="Observations éventuelles (facultatif)"></textarea></div>
       <div class="fiche-cell full"><span>Date</span><b>${fDate(new Date())}</b></div>
     </div>
-    <div class="fiche-signs single"><div class="fiche-sign"><h3>Signature *</h3>${padHtml('padCfo', 'Signez ici pour valider')}<div class="field-error" id="eSigC"></div>
+    <div class="fiche-signs single"><div class="fiche-sign"><h3>Signature *</h3>${padHtml('padCfo', 'Signez ici pour valider')}<div class="field-error" id="eSigC"></div>${certifyHtml('cfoCert')}
       <div class="form-actions" style="margin-top:6px">
         <button class="btn btn-ghost" onclick="openReturnCfo('${d.ref}')">${icon('arrow', 'i-back')} Retourner au RAF/HF</button>
         <button class="btn btn-success" onclick="submitCfo('${d.ref}')">${icon('check')} Valider et signer</button>
@@ -1349,7 +1481,7 @@ function rafSection(d) {
       <div class="fiche-cell full"><span>Réserve</span><b style="font-weight:500">${esc(r.reserve) || '—'}</b></div>
       <div class="fiche-cell full"><span>Date</span><b>${fDate(r.date)}</b></div>
     </div>
-    <div class="fiche-signs single"><div class="fiche-sign"><h3>Signature</h3>${signatureBlock(d.sigRaf, '')}</div></div>`;
+    <div class="fiche-signs single"><div class="fiche-sign"><h3>Signature</h3>${signatureBlock(d.sigRaf, '', d, 'raf')}</div></div>`;
   }
   return `${head}<div class="fiche-grid" id="rafForm">${ident}
       <div class="fiche-cell full"><span>Montant achat *</span>
@@ -1363,7 +1495,7 @@ function rafSection(d) {
       <div class="fiche-cell full"><label for="rafReserve">Réserve</label><textarea class="input" id="rafReserve" rows="2" placeholder="Observations éventuelles (facultatif)">${esc(d.raf?.reserve)}</textarea></div>
       <div class="fiche-cell full"><span>Date</span><b>${fDate(new Date())}</b></div>
     </div>
-    <div class="fiche-signs single"><div class="fiche-sign"><h3>Signature *</h3>${padHtml('padRaf', 'Signez ici pour valider')}<div class="field-error" id="eSigR"></div>
+    <div class="fiche-signs single"><div class="fiche-sign"><h3>Signature *</h3>${padHtml('padRaf', 'Signez ici pour valider')}<div class="field-error" id="eSigR"></div>${certifyHtml('rafCert')}
       <div class="form-actions" style="margin-top:6px">
         <button class="btn btn-ghost" onclick="openReturn('${d.ref}')">${icon('arrow', 'i-back')} Retourner au N+1</button>
         <button class="btn btn-success" onclick="submitRaf('${d.ref}')">${icon('check')} Valider et signer</button>
@@ -1456,6 +1588,8 @@ function viewDemande(ref) {
   const isCfo = session.id === CFO_ID && d.statut === 'cfo';
   const isMenueActor = d.statut.startsWith('m_') && actorOf(d) === session.id;
   const isMenueCompta = isMenueActor && d.statut === 'm_compta';
+  if (isN1) afterRender = () => { initPad($('#padManager')).addEventListener('pointerdown', () => { $('#eSigM').textContent = ''; }); };
+  if (isMenueActor && !isMenueCompta) afterRender = () => { initPad($('#padMenue')).addEventListener('pointerdown', () => { $('#eSigMenue').textContent = ''; }); };
   if (isMenueCompta) afterRender = () => {
     comptaPieces = [];
     initPad($('#padCompta')).addEventListener('pointerdown', () => { $('#eSigCompta').textContent = ''; });
@@ -1494,16 +1628,14 @@ function viewDemande(ref) {
   const actions = pdfBtn + (isBcCompta ? `
     <button class="btn btn-primary" onclick="document.getElementById('bcForm').scrollIntoView({behavior:'smooth'})">${icon('file')} Établir le bon de commande</button>` : isAchat ? `
     <button class="btn btn-primary" onclick="openAchat('${d.ref}')">${icon('check')} Confirmer l'achat effectué</button>` : isMenueActor ? `
-    <button class="btn btn-ghost" onclick="openMenueReject('${d.ref}')">${icon('x')} Rejeter</button>
     ${isMenueCompta
-      ? `<button class="btn btn-primary" onclick="document.getElementById('comptaForm').scrollIntoView({behavior:'smooth'})">${icon('pen')} Compléter et viser</button>`
-      : `<button class="btn btn-primary" onclick="openMenueSign('${d.ref}')">${icon('pen')} Signer la fiche de menues dépenses</button>`}` : isCfo ? `
+      ? `<button class="btn btn-ghost" onclick="openMenueReject('${d.ref}')">${icon('x')} Rejeter</button><button class="btn btn-primary" onclick="document.getElementById('comptaForm').scrollIntoView({behavior:'smooth'})">${icon('pen')} Compléter et viser</button>`
+      : `<button class="btn btn-primary" onclick="document.getElementById('mdForm').scrollIntoView({behavior:'smooth',block:'center'})">${icon('pen')} Remplir mon formulaire de validation</button>`}` : isCfo ? `
     <button class="btn btn-ghost" onclick="openReturnCfo('${d.ref}')">${icon('arrow', 'i-back')} Retourner au RAF/HF</button>
     <button class="btn btn-primary" onclick="document.getElementById('cfoForm').scrollIntoView({behavior:'smooth'})">${icon('pen')} Compléter et signer</button>` : isRaf ? `
     <button class="btn btn-ghost" onclick="openReturn('${d.ref}')">${icon('arrow', 'i-back')} Retourner au N+1</button>
     <button class="btn btn-primary" onclick="document.getElementById('rafForm').scrollIntoView({behavior:'smooth'})">${icon('pen')} Compléter et signer</button>` : isN1 ? `
-    <button class="btn btn-ghost" onclick="openReject('${d.ref}')">${icon('x')} Rejeter</button>
-    <button class="btn btn-primary" onclick="openValidate('${d.ref}')">${icon('pen')} Valider et signer</button>` : '');
+    <button class="btn btn-primary" onclick="document.getElementById('n1Form').scrollIntoView({behavior:'smooth',block:'center'})">${icon('pen')} Remplir mon formulaire de validation</button>` : '');
   let banner = '';
   if (d.statut === 'rejetee') banner = `<div class="alert alert-danger">${icon('message')}<div><b>Demande rejetée par ${esc(nom(d.rejetPar || d.n1))}</b><p>« ${esc(d.commentaire)} »</p>${isOwner ? `<a class="btn btn-ghost btn-sm" href="#/nouvelle-demande/${d.ref}">${icon('pen')} Corriger et renvoyer</a>` : ''}</div></div>`;
   else if (isBcCompta) banner = `<div class="alert alert-warning">${icon('file')}<div><b>FED validée pour ${fcfa(d.cfo.montant)} : établissez le bon de commande</b><p>Complétez le bon de commande en bas de page, puis délivrez-le à Facilities. Le délai d'achat de 72 h démarre à la délivrance.</p></div></div>`;
@@ -1514,7 +1646,7 @@ function viewDemande(ref) {
   else if (d.statut === 'validee') banner = `<div class="alert alert-success">${icon('check')}<div><b>Demande clôturée · fiche de menues dépenses visée (référence N° ${esc(d.compta.refCompta)})</b><p>FED validée pour ${fcfa(d.cfo.montant)} · fiche de menues dépenses visée par ${esc(nom(COMPTA_ID))} le ${fDate(d.sigs.compta.at)} à ${fTime(d.sigs.compta.at)}.</p></div></div>`;
 
   else if (isMenueCompta) banner = `<div class="alert alert-warning">${icon('inbox')}<div><b>La fiche de menues dépenses attend votre visa</b><p>Renseignez l'évolution budgétaire, la référence et les justificatifs en bas de la fiche, puis visez.</p></div></div>`;
-  else if (isMenueActor) banner = `<div class="alert alert-warning">${icon('inbox')}<div><b>La fiche de menues dépenses attend votre signature</b><p>La FED est validée. Signez la fiche de menues dépenses, ou rejetez-la avec un commentaire envoyé à ${esc(nom(d.demandeur))}.</p></div></div>`;
+  else if (isMenueActor) banner = `<div class="alert alert-warning">${icon('inbox')}<div><b>La fiche de menues dépenses attend votre signature</b><p>La FED est validée. Remplissez votre formulaire de validation sous le tableau « Validation de la hiérarchie » : validez en signant, ou rejetez avec un commentaire envoyé à ${esc(nom(d.demandeur))}.</p></div></div>`;
   else if (d.statut.startsWith('m_')) banner = `<div class="alert alert-warning">${icon('clock')}<div><b>FED validée · fiche de menues dépenses en cours</b><p>En attente de la signature de ${MENUE_ROLES[d.statut.slice(2)]} (${esc(nom(actorOf(d)))}).</p></div></div>`;
   else if (isCfo) banner = `<div class="alert alert-warning">${icon('inbox')}<div><b>Cette demande attend votre validation (2)</b><p>Les parties précédentes sont en lecture seule. Choisissez la proforma retenue, confirmez le montant et signez en bas de la fiche, ou retournez-la au RAF/HF.</p></div></div>`;
   else if (d.statut === 'cfo') banner = `<div class="alert alert-warning">${icon('clock')}<div><b>Validée par ${esc(nom(RAF_ID))} (RAF/HF)</b><p>En attente de la validation de ${esc(nom(CFO_ID))} (CFO).</p></div></div>`;
@@ -1522,7 +1654,7 @@ function viewDemande(ref) {
   else if (isRaf) banner = `<div class="alert alert-warning">${icon('inbox')}<div><b>Cette demande attend votre validation</b><p>Les parties Demandeur et Manager sont en lecture seule. Complétez votre partie en bas de la fiche et signez, ou retournez-la au N+1 si elle est mal remplie.</p></div></div>`;
   else if (d.statut === 'raf') banner = `<div class="alert alert-warning">${icon('clock')}<div><b>Validée par ${esc(nom(d.n1))} (N+1)</b><p>En attente de la validation de ${esc(nom(RAF_ID))} (RAF/HF).</p></div></div>`;
   else if (isN1 && d.retourRaf) banner = `<div class="alert alert-danger">${icon('message')}<div><b>Retournée par ${esc(nom(d.retourRaf.by))} (RAF/HF) le ${fDate(d.retourRaf.at)} à ${fTime(d.retourRaf.at)}</b><p>« ${esc(d.retourRaf.comment)} »</p><p class="muted" style="font-size:12.5px">Validez à nouveau si la fiche est correcte, ou rejetez-la vers ${esc(nom(d.demandeur))} pour correction.</p></div></div>`;
-  else if (isN1) banner = `<div class="alert alert-warning">${icon('inbox')}<div><b>Cette demande attend votre décision</b><p>Validez-la en signant, ou rejetez-la avec un commentaire qui sera transmis à ${esc(nom(d.demandeur))}.</p></div></div>`;
+  else if (isN1) banner = `<div class="alert alert-warning">${icon('inbox')}<div><b>Cette demande attend votre décision</b><p>Remplissez votre formulaire de validation dans la case « Signature Manager » : validez en signant, ou rejetez avec un commentaire transmis à ${esc(nom(d.demandeur))}.</p></div></div>`;
   else if (d.statut === 'attente' && d.retourRaf) banner = `<div class="alert alert-warning">${icon('clock')}<div><b>Retournée au N+1 par le RAF/HF</b><p>« ${esc(d.retourRaf.comment)} »</p></div></div>`;
   else if (d.statut === 'attente') banner = `<div class="alert alert-warning">${icon('clock')}<div><b>En attente de validation</b><p>Transmise à ${esc(nom(d.n1))} (N+1) le ${fDate(d.date)} à ${fTime(d.date)}.</p></div></div>`;
   // Circuit complet : FED (N+1, RAF/HF, CFO), puis fiche de menues dépenses pour une menue dépense
@@ -1544,6 +1676,8 @@ function viewDemande(ref) {
     <div class="card"><div class="stepper">${steps}</div>${d.type === 'menue' ? `<p class="hint" style="justify-content:center;margin-top:10px">${dgNote(menueMontant(d))}</p>` : ''}</div>
     <div class="grid-2">
       <div style="min-width:0;display:grid;gap:20px">${achatCard(d)}${ficheView(d)}${showMenue ? ficheMenueView(d) : ''}${bcView(d)}</div>
+      <div style="display:grid;gap:20px;align-content:start;min-width:0">
+      ${signaturesCard(d)}
       <div class="card">
         <div class="card-head"><h2>Historique</h2></div>
         <div class="timeline">
@@ -1551,7 +1685,22 @@ function viewDemande(ref) {
             <div class="tl"><div class="pt"></div><div><b>${esc(h.action)}</b><small>${esc(nom(h.by))} · ${fDateTime(h.at)}</small>${h.note ? `<p style="margin:6px 0 0;padding:8px 10px;background:var(--bg);border-radius:8px;border:1px solid var(--border);font-size:13px">« ${esc(h.note)} »</p>` : ''}</div></div>`).join('')}
         </div>
       </div>
+      </div>
     </div>`;
+}
+
+// Registre des signatures : formulaires signés (en vigueur) et versions archivées
+function signaturesCard(d) {
+  const current = Object.keys(LEVELS).filter(l => sigOf(d, l)?.hash);
+  const arch = d.archives || [];
+  if (!current.length && !arch.length) return '';
+  const item = (label, sig, ok, extra) => `<div class="sig-item ${ok ? '' : 'bad'}">${icon('lock')}<div><b>${label}</b><small>${esc(nom(sig.by))} · ${fDateTime(sig.at)} · <code title="${sig.hash}">${sig.hash.slice(0, 10)}…</code></small>${extra || ''}</div></div>`;
+  return `<div class="card">
+    <div class="card-head"><h2>Formulaires signés</h2><span class="badge b-success">${current.length} verrouillé${current.length > 1 ? 's' : ''}</span></div>
+    <div class="sig-list">${current.map(l => item(`${LEVELS[l]}${versionOf(d, l) > 1 ? ` · v${versionOf(d, l)}` : ''}`, sigOf(d, l), verify(d, l), verify(d, l) ? '' : '<small style="color:var(--danger)">Modifié après signature</small>')).join('')}</div>
+    ${arch.length ? `<h3 style="margin:16px 0 8px">Versions archivées</h3>
+    <div class="sig-list">${arch.map(a => item(`${LEVELS[a.level]} · v${a.version}`, a.sig, a.sig.hash === hashFor(d, a.level, a.sig, a.data), `<small>Remplacée : ${esc(a.motif)}</small>`)).join('')}</div>` : ''}
+  </div>`;
 }
 
 /* Nouvelle demande (ou correction d'une demande rejetée) */
@@ -1610,7 +1759,7 @@ function viewNouvelle(ref) {
         <div class="fiche-cell full"><label for="fDesc" style="font-size:12px;color:var(--text-muted);font-weight:600">Précisions (facultatif)</label><textarea class="input" id="fDesc" rows="2" placeholder="Fournisseur pressenti, urgence, lieu…">${esc(src?.description ?? '')}</textarea></div>
       </div>
       <div class="fiche-signs">
-        <div class="fiche-sign"><h3>Signature Demandeur *</h3>${padHtml('padDemandeur', 'Signez ici')}<div class="field-error" id="eSig"></div></div>
+        <div class="fiche-sign"><h3>Signature Demandeur *</h3>${padHtml('padDemandeur', 'Signez ici')}<div class="field-error" id="eSig"></div>${certifyHtml('demCert')}</div>
         <div class="fiche-sign"><h3>Signature Manager</h3><div class="sign-box">${icon('lock')}&nbsp;Réservée au N+1${manager ? ` : ${esc(manager.nom)}` : ''}</div><div class="sign-meta">Sera complétée lors de la validation.</div></div>
       </div>
     </form>
@@ -1650,7 +1799,7 @@ function menueSigTable(d) {
     <tbody>${rows.map(([k, label, id]) => {
       const sg = d.sigs?.[k];
       const needed = k !== 'dg' || menueMontant(d) >= SEUIL_DG;
-      const cell = sg ? `<img class="sig-mini" src="${sg.img || sigFromName(sg.by)}" alt="Signature de ${esc(nom(sg.by))}">`
+      const cell = sg ? `<img class="sig-mini" src="${sg.img || sigFromName(sg.by)}" alt="Signature de ${esc(nom(sg.by))}">${d.ref ? lockLine(d, 'md_' + k) : ''}`
         : !needed ? '<span class="muted">Non requise (&lt; 150 001 FCFA)</span>'
         : d.statut === 'm_' + k ? '<span class="badge b-warning">En attente</span>'
         : d.statut === 'rejetee' && d.rejetPar === id ? '<span class="badge b-danger">Rejetée</span>'
@@ -1680,7 +1829,7 @@ function ficheMenueView(d) {
           <div class="upload" style="padding:12px" onclick="addJustif('${d.ref}')">${icon('upload')}<div><b>Ajouter une facture ou un reçu</b> · PDF, JPG, PNG</div></div>
           <div class="field-error" id="ePieces"></div></div>
       </div>
-      <div class="fiche-signs single"><div class="fiche-sign"><h3>Visa Comptabilité *</h3>${padHtml('padCompta', 'Visez ici')}<div class="field-error" id="eSigCompta"></div>
+      <div class="fiche-signs single"><div class="fiche-sign"><h3>Visa Comptabilité *</h3>${padHtml('padCompta', 'Visez ici')}<div class="field-error" id="eSigCompta"></div>${certifyHtml('comptaCert')}
         <div class="form-actions" style="margin-top:6px">
           <button class="btn btn-ghost" onclick="openMenueReject('${d.ref}')">${icon('x')} Rejeter</button>
           <button class="btn btn-success" onclick="submitCompta('${d.ref}')">${icon('check')} Viser et clôturer</button>
@@ -1696,7 +1845,7 @@ function ficheMenueView(d) {
         <div class="fiche-cell"><span>Désignation du type d'opération / Libellé</span><b>${esc(c?.designation) || '—'}</b></div>
         <div class="fiche-cell full"><span>Pièce(s) justificative(s)</span><b>${c ? c.pieces.map(pc => `<a href="#/demande/${d.ref}" onclick="event.preventDefault();toast('Aperçu de la pièce (démo)')">${esc(pc)}</a>`).join(' · ') : '—'}</b></div>
       </div>
-      <div class="fiche-signs single"><div class="fiche-sign"><h3>Visa Comptabilité</h3>${signatureBlock(d.sigs.compta, d.statut !== 'm_compta' ? '—' : `${icon('clock')}&nbsp;À viser par ${esc(nom(COMPTA_ID))} (Comptabilité)`)}</div></div>`;
+      <div class="fiche-signs single"><div class="fiche-sign"><h3>Visa Comptabilité</h3>${signatureBlock(d.sigs.compta, d.statut !== 'm_compta' ? '—' : `${icon('clock')}&nbsp;À viser par ${esc(nom(COMPTA_ID))} (Comptabilité)`, d, 'compta')}</div></div>`;
   return `
     <div class="fiche">
       ${menueHead(d.ref, c?.refCompta)}
@@ -1709,9 +1858,18 @@ function ficheMenueView(d) {
         <div class="fiche-cell"><span>Montant <i class="muted" style="font-weight:500">(validé par le CFO sur la FED)</i></span><b>${fcfa(menueMontant(d))}</b></div>
         <div class="fiche-cell"><span>Objet</span><b>${esc(d.objet)}</b></div>
       </div>
-      <div class="fiche-signs single"><div class="fiche-sign"><h3>Signature du demandeur</h3>${signatureBlock(d.sigDemandeur, 'Non signée')}</div></div>
+      <div class="fiche-signs single"><div class="fiche-sign"><h3>Signature du demandeur</h3>${signatureBlock(d.sigDemandeur, 'Non signée', d, 'demandeur')}</div></div>
       <div class="fiche-section">2. Validation de la hiérarchie</div>
       ${menueSigTable(d)}
+      ${['m_raf', 'm_dc', 'm_dg'].includes(d.statut) && actorOf(d) === session.id ? `
+      <div class="level-form" id="mdForm" style="margin:16px 24px">
+        <h3>Votre validation · ${MENUE_ROLES[d.statut.slice(2)].replace(/^(le|la) /, '')} *</h3>
+        <div class="radio-row"><label><input type="radio" name="mddec" value="ok" checked onchange="mdDec()"> Valider</label><label><input type="radio" name="mddec" value="ko" onchange="mdDec()"> Rejeter</label></div>
+        <textarea class="input" id="mdCom" rows="2" placeholder="Commentaire (obligatoire en cas de rejet, visible par ${esc(nom(d.demandeur))})"></textarea><div class="field-error" id="eMdCom"></div>
+        <div id="mdPadWrap">${padHtml('padMenue', 'Signez ici pour valider')}<div class="field-error" id="eSigMenue"></div></div>
+        ${certifyHtml('mdCert')}
+        <button class="btn btn-success" id="mdSubmit" style="justify-content:center" onclick="submitMenueStep('${d.ref}')">${icon('check')} Signer et valider</button>
+      </div>` : ''}
       <p class="fiche-note">La copie de cette fiche doit être jointe au bordereau de retrait et archivée à la caisse.</p>
       ${part34}
       <p class="fiche-note">Après décaissement des fonds, la fiche et les justificatifs de la dépense (factures, reçus) devront être transmis au service Comptabilité.</p>
@@ -1740,35 +1898,36 @@ function menueMontantChange() {
   $('#dgHint').classList.toggle('hint-warn', n >= SEUIL_DG);
 }
 
-function openMenueSign(ref) {
-  const d = DEMANDES.find(x => x.ref === ref);
-  openModal(`
-    <div class="modal-head"><h2>Valider et signer</h2><button class="icon-btn" onclick="closeModal()" aria-label="Fermer">${icon('x')}</button></div>
-    <p class="muted" style="margin:0">${d.ref} · ${esc(d.objet)} · <b style="color:var(--text)">${fcfa(menueMontant(d))}</b></p>
-    <p class="hint" style="margin:0">Vous signez la fiche de menues dépenses pour ${MENUE_ROLES[d.statut.slice(2)]}.</p>
-    <div class="field"><label>Signature *</label>${padHtml('padMenue', 'Signez ici pour valider')}<div class="field-error" id="eSigMenue"></div></div>
-    <div class="field"><label for="mCom">Commentaire (facultatif)</label><textarea class="input" id="mCom" rows="2" placeholder="Visible par le demandeur"></textarea></div>
-    <div class="modal-actions"><button class="btn btn-ghost" onclick="closeModal()">Annuler</button><button class="btn btn-success" onclick="confirmMenueSign('${ref}')">${icon('check')} Signer et valider</button></div>`,
-    () => initPad($('#padMenue')));
+function mdDec() {
+  const ko = document.querySelector('input[name=mddec]:checked').value === 'ko';
+  $('#mdPadWrap').classList.toggle('hidden', ko);
+  $('#mdSubmit').className = 'btn ' + (ko ? 'btn-danger' : 'btn-success');
+  $('#mdSubmit').innerHTML = ko ? `${icon('x')} Signer le rejet et notifier` : `${icon('check')} Signer et valider`;
 }
-function confirmMenueSign(ref) {
-  const sigPad = $('#padMenue');
-  if (sigPad.isEmpty) { $('#eSigMenue').textContent = 'Votre signature est obligatoire pour valider.'; sigPad.classList.add('invalid'); return; }
+function submitMenueStep(ref) {
   const d = DEMANDES.find(x => x.ref === ref);
-  const now = nowIso(), com = $('#mCom').value.trim(), step = d.statut.slice(2);
+  const ko = document.querySelector('input[name=mddec]:checked').value === 'ko';
+  const com = $('#mdCom').value.trim(), sigPad = $('#padMenue');
+  let ok = true;
+  $('#eMdCom').textContent = ko && com.length < 10 ? 'Le motif du rejet est obligatoire (10 caractères minimum).' : ''; if (ko && com.length < 10) ok = false;
+  if (!ko) { $('#eSigMenue').textContent = sigPad.isEmpty ? 'Votre signature est obligatoire pour valider.' : ''; if (sigPad.isEmpty) { ok = false; sigPad.classList.add('invalid'); } }
+  if (!checkCertify('mdCert')) ok = false;
+  if (!ok) { toast('Complétez votre formulaire de validation'); return; }
+  if (ko) { rejectMenue(d, com); return; }
+  const now = nowIso(), step = d.statut.slice(2);
   const order = menueOrder(d);
   const next = order[order.indexOf(step) + 1];
-  d.sigs[step] = { by: session.id, at: now, img: sigPad.toDataURL() };
+  d.sigs[step] = { by: session.id, at: now, img: sigPad.toDataURL(), note: com };
+  seal(d, 'md_' + step);
   d.statut = 'm_' + next;
-  d.historique.push({ at: now, by: session.id, action: `Fiche de menues dépenses signée par ${MENUE_ROLES[step]}`, note: com || undefined });
+  d.historique.push({ at: now, by: session.id, action: `Fiche de menues dépenses signée électroniquement par ${MENUE_ROLES[step]}`, note: com || undefined });
   notify(MENUE_ACTOR[next], ref, next === 'compta'
     ? `La menue dépense de ${nom(d.demandeur)} est signée : elle attend votre visa.`
     : `${session.name} a signé la fiche de menues dépenses de ${nom(d.demandeur)} (${fcfa(menueMontant(d))}) : elle attend votre signature.`);
   notify(d.demandeur, ref, `Votre menue dépense a été signée par ${session.name} (${MENUE_ROLES[step]}).`);
   if (next === 'compta') notifyFacilities(d);
-  audit(`Menue dépense signée (${MENUE_ROLES[step]})`, ref);
-  closeModal();
-  toast(`Menue dépense ${ref} signée · transmise à ${nom(MENUE_ACTOR[next])}`);
+  audit(`Signature électronique · ${LEVELS['md_' + step]}`, ref);
+  toast(`Formulaire signé et verrouillé · transmis à ${nom(MENUE_ACTOR[next])}`);
   render();
 }
 
@@ -1784,13 +1943,15 @@ function openMenueReject(ref) {
 function confirmMenueReject(ref) {
   const com = $('#mrCom').value.trim();
   if (com.length < 10) { $('#eMrCom').textContent = 'Le commentaire est obligatoire (10 caractères minimum).'; $('#mrCom').classList.add('invalid'); return; }
-  const d = DEMANDES.find(x => x.ref === ref);
-  const now = nowIso();
+  closeModal();
+  rejectMenue(DEMANDES.find(x => x.ref === ref), com);
+}
+function rejectMenue(d, com) {
+  const now = nowIso(), ref = d.ref;
   d.historique.push({ at: now, by: session.id, action: `Fiche de menues dépenses rejetée par ${MENUE_ROLES[d.statut.slice(2)]}`, note: com });
   Object.assign(d, { statut: 'rejetee', commentaire: com, rejetPar: session.id, rejetEtape: d.statut });
   notify(d.demandeur, ref, `Votre menue dépense a été rejetée par ${session.name} : « ${com.length > 70 ? com.slice(0, 70) + '…' : com} »`);
   audit('Menue dépense rejetée', ref);
-  closeModal();
   toast(`Menue dépense ${ref} rejetée · commentaire envoyé à ${nom(d.demandeur)}`);
   render();
 }
@@ -1858,7 +2019,7 @@ function bcView(d) {
         <div class="bc-cond">– Paiement de ${esc(b.paiement)} 100 %</div>
         <div class="bc-cond">– Mode de paiement : par chèque (APSFD-CI)</div></div>
       <p class="fiche-note">${BC_NOTE}</p>
-      <div class="fiche-cell full"><span>Délivré à Facilities</span><b>${fDateTime(b.delivre.at)} par ${esc(nom(b.delivre.by))} (Comptabilité)</b></div>
+      <div class="fiche-cell full"><span>Délivré à Facilities</span><b>${fDateTime(b.delivre.at)} par ${esc(nom(b.delivre.by))} (Comptabilité)</b>${lockLine(d, 'bc')}</div>
       ${signBoxes}</div>`;
   }
   const pf = d.raf?.proformas[d.cfo?.proforma];
@@ -1885,7 +2046,8 @@ function bcView(d) {
       <div class="bc-cond">– Mode de paiement : par chèque (APSFD-CI)</div></div>
     <p class="fiche-note">${BC_NOTE}</p>
     ${signBoxes}
-    <div class="form-actions" style="padding:16px 24px 20px;justify-content:flex-end"><button class="btn btn-success" onclick="submitBc('${d.ref}')">${icon('check')} Délivrer le bon de commande à Facilities</button></div>
+    <div style="padding:16px 24px 0">${certifyHtml('bcCert')}</div>
+    <div class="form-actions" style="padding:8px 24px 20px;justify-content:flex-end"><button class="btn btn-success" onclick="submitBc('${d.ref}')">${icon('check')} Signer et délivrer le bon de commande à Facilities</button></div>
   </div>`;
 }
 
@@ -1897,11 +2059,13 @@ function submitBc(ref) {
   $('#bcF').closest('.fiche-cell').querySelector('.field-error').textContent = four ? '' : 'Saisissez le nom du fournisseur.'; $('#bcF').classList.toggle('invalid', !four); if (!four) ok = false;
   const linesOk = lignes.length && lignes.every(l => l.designation.trim() && l.qte > 0 && l.pu > 0);
   $('#eLines').textContent = linesOk ? '' : 'Chaque ligne doit avoir une désignation, une quantité et un prix unitaire.'; if (!linesOk) ok = false;
+  if (!checkCertify('bcCert')) ok = false;
   if (!ok) { toast('Complétez les champs signalés'); return; }
   const now = nowIso(), total = bcTotal(lignes), numero = `BC-2026-${String(nextBc++).padStart(4, '0')}`;
   d.bcDoc = { numero, date: now, fournisseur: four, adresse: $('#bcA').value.trim(), reference: $('#bcR').value.trim(), tel: $('#bcT').value.trim(), email: $('#bcE').value.trim(),
     lignes: lignes.map(l => ({ designation: l.designation.trim(), qte: l.qte, pu: l.pu })), total, lettres: enLettres(total), paiement: $('#bcP').value.trim() || 'à la livraison',
     delivre: { by: session.id, at: now } };
+  seal(d, 'bc');
   d.statut = 'achat';
   d.historique.push({ at: now, by: session.id, action: `Bon de commande ${numero} établi par la Comptabilité et délivré à Facilities · ${fcfa(total)}` });
   notifyFacilities(d);
@@ -1932,10 +2096,12 @@ function submitCompta(ref) {
   req('#cDesig', $('#cDesig').value.trim() !== '', "Saisissez la désignation de l'opération.");
   $('#ePieces').textContent = comptaPieces.length ? '' : 'Ajoutez au moins une pièce justificative.'; if (!comptaPieces.length) ok = false;
   $('#eSigCompta').textContent = sigPad.isEmpty ? 'Votre visa est obligatoire.' : ''; if (sigPad.isEmpty) { ok = false; sigPad.classList.add('invalid'); }
+  if (!checkCertify('comptaCert')) ok = false;
   if (!ok) { toast('Complétez les champs signalés'); return; }
   const now = nowIso();
   d.compta = { refCompta: $('#cRef').value.trim(), budgetPrev: num('#cPrev'), budgetReal: num('#cReal'), imputation: $('#cImput').value.trim(), designation: $('#cDesig').value.trim(), pieces: [...comptaPieces], date: now };
   d.sigs.compta = { by: session.id, at: now, img: sigPad.toDataURL() };
+  seal(d, 'compta');
   d.statut = 'validee';
   d.historique.push({ at: now, by: session.id, action: `Fiche de menues dépenses visée par la Comptabilité · Référence N° ${d.compta.refCompta}` });
   [d.demandeur, RAF_ID].forEach(to => notify(to, ref, `La menue dépense ${ref} a été visée par la Comptabilité (référence N° ${d.compta.refCompta}).`));
@@ -1963,6 +2129,7 @@ function achatCard(d) {
       <div><span>Achat effectué le</span><b>${fDateTime(f.at)} · ${esc(nom(f.by))}</b></div>
       <div><span>Fournisseur · montant</span><b>${esc(f.fournisseur)} · ${fcfa(f.montant)}</b></div>
       <div><span>Facture</span><b><a href="#/demande/${d.ref}" onclick="event.preventDefault();toast('Aperçu de la pièce (démo)')">${esc(f.facture)}</a></b></div>
+      <div style="grid-column:1/-1">${lockLine(d, 'achat')}</div>
       ${f.commentaire ? `<div><span>Commentaire</span><b style="font-weight:500">${esc(f.commentaire)}</b></div>` : ''}` : `
       <div><span>Statut</span><b>${retard ? 'Délai dépassé' : 'À effectuer'}</b></div>`}
     </div></div>`;
@@ -2027,7 +2194,8 @@ function openAchat(ref) {
     <div class="field"><label for="aMontant">Montant payé (FCFA) *</label><input class="input" id="aMontant" inputmode="numeric" value="${fmtNum(d.cfo.montant)}" oninput="this.value=this.value.replace(/[^0-9]/g,'').replace(/\\B(?=(\\d{3})+(?!\\d))/g,' ')"><div class="field-error" id="eAMontant"></div></div>
     <div class="field"><label>Facture ou reçu *</label><div class="upload" style="padding:12px" id="aFacture" onclick="this.dataset.file='Facture_${d.ref}.pdf';this.querySelector('b').textContent='Facture_${d.ref}.pdf';$('#eAFacture').textContent=''">${icon('upload')}<div><b>Joindre la facture</b> · PDF, JPG, PNG</div></div><div class="field-error" id="eAFacture"></div></div>
     <div class="field"><label for="aCom">Commentaire</label><textarea class="input" id="aCom" rows="2" placeholder="Ex. Livraison prévue le 16/10/2026"></textarea></div>
-    <div class="modal-actions"><button class="btn btn-ghost" onclick="closeModal()">Annuler</button><button class="btn btn-success" onclick="confirmAchat('${ref}')">${icon('check')} Confirmer l'achat</button></div>`,
+    ${certifyHtml('achatCert')}
+    <div class="modal-actions"><button class="btn btn-ghost" onclick="closeModal()">Annuler</button><button class="btn btn-success" onclick="confirmAchat('${ref}')">${icon('check')} Signer et confirmer l'achat</button></div>`,
     () => $('#aFour').focus());
 }
 function confirmAchat(ref) {
@@ -2036,9 +2204,11 @@ function confirmAchat(ref) {
   $('#eAFour').textContent = four ? '' : 'Saisissez le fournisseur.';
   $('#eAMontant').textContent = montant > 0 ? '' : 'Saisissez le montant payé.';
   $('#eAFacture').textContent = facture ? '' : 'Joignez la facture ou le reçu.';
-  if (!four || !(montant > 0) || !facture) return;
+  const cert = checkCertify('achatCert');
+  if (!four || !(montant > 0) || !facture || !cert) return;
   const now = nowIso();
   d.achat = { fait: { by: session.id, at: now, fournisseur: four, montant, facture, commentaire: $('#aCom').value.trim() } };
+  seal(d, 'achat');
   if (d.statut === 'achat') d.statut = 'validee';
   const h = Math.round(heuresEntre(achatDebut(d), now));
   d.historique.push({ at: now, by: session.id, action: `Achat effectué par Facilities · ${fcfa(montant)} (traité en ${h} h)`, note: d.achat.fait.commentaire || undefined });
@@ -2126,6 +2296,7 @@ function submitFiche(resubmitRef) {
   setErr('#eMontant', montant > 0 ? '' : 'Saisissez le montant estimé en FCFA.', $('#fMontant'));
   setErr('#eSig', sigPad.isEmpty ? 'Votre signature est obligatoire pour transmettre la fiche.' : '');
   if (sigPad.isEmpty) sigPad.classList.add('invalid');
+  if (!checkCertify('demCert')) ok = false;
   if (!ok) { toast('Complétez les champs signalés'); return; }
 
   const now = nowIso();
@@ -2135,13 +2306,18 @@ function submitFiche(resubmitRef) {
   let d;
   if (resubmitRef) {
     d = DEMANDES.find(x => x.ref === resubmitRef);
+    // Les formulaires signés de la version rejetée sont archivés (verrouillés) avant la nouvelle version
+    const motif = `rejet par ${nom(d.rejetPar || d.n1)} le ${fDateTime(now)}`;
+    Object.keys(LEVELS).forEach(l => archive(d, l, motif));
     Object.assign(d, { type, bcDoc: null, achat: null, sigs: {}, compta: null, rejetPar: null, rejetEtape: null, compte: me.compteMD, objet, proforma: pf.value === 'oui', montant, description: $('#fDesc').value.trim(), date: now, statut: 'attente', sigDemandeur: sig, sigManager: null, sigRaf: null, raf: null, retourRaf: null, sigCfo: null, cfo: null, retourCfo: null, commentaire: '', pieces });
-    d.historique.push({ at: now, by: session.id, action: 'Fiche corrigée, signée et renvoyée au N+1' });
+    seal(d, 'demandeur');
+    d.historique.push({ at: now, by: session.id, action: `Fiche corrigée (version ${versionOf(d, 'demandeur')}), signée électroniquement et renvoyée au N+1` });
   } else {
     const ref = `FED-2026-${String(nextRef++).padStart(4, '0')}`;
     d = { ref, type, bcDoc: null, sigs: {}, compta: null, compte: me.compteMD, demandeur: session.id, n1: me.n1, objet, proforma: pf.value === 'oui', montant, description: $('#fDesc').value.trim(), date: now, statut: 'attente',
           sigDemandeur: sig, sigManager: null, sigRaf: null, raf: null, retourRaf: null, sigCfo: null, cfo: null, retourCfo: null, commentaire: '', pieces: pieces.map(p => p.replace('jointe', ref)), historique: [{ at: now, by: session.id, action: 'Fiche signée et transmise au N+1' }] };
     DEMANDES.unshift(d);
+    seal(d, 'demandeur');
   }
   notify(d.n1, d.ref, `${me.nom} vous a transmis une demande à valider${resubmitRef ? ' (version corrigée)' : ''}.`);
   audit(resubmitRef ? 'Demande corrigée et renvoyée' : 'Demande signée et transmise', d.ref);
@@ -2157,52 +2333,32 @@ function openModal(html, onReady) {
 function closeModal() { $('#modalRoot').innerHTML = ''; }
 document.addEventListener('keydown', e => { if (e.key === 'Escape') closeModal(); });
 
-function openValidate(ref) {
+function submitN1(ref) {
   const d = DEMANDES.find(x => x.ref === ref);
-  openModal(`
-    <div class="modal-head"><h2>Valider et signer</h2><button class="icon-btn" onclick="closeModal()" aria-label="Fermer">${icon('x')}</button></div>
-    <p class="muted" style="margin:0">${d.ref} · ${esc(d.objet)} · <b style="color:var(--text)">${fcfa(d.montant)}</b></p>
-    <div class="field"><label>Signature Manager *</label>${padHtml('padManager', 'Signez ici pour valider')}<div class="field-error" id="eSigM"></div></div>
-    <div class="field"><label for="vCom">Commentaire (facultatif)</label><textarea class="input" id="vCom" rows="2" placeholder="Visible par le demandeur"></textarea></div>
-    <div class="modal-actions"><button class="btn btn-ghost" onclick="closeModal()">Annuler</button><button class="btn btn-success" onclick="confirmValidate('${ref}')">${icon('check')} Signer et valider</button></div>`,
-    () => initPad($('#padManager')));
-}
-function confirmValidate(ref) {
-  const pad = $('#padManager');
-  if (pad.isEmpty) { $('#eSigM').textContent = 'Votre signature est obligatoire pour valider.'; pad.classList.add('invalid'); return; }
-  const d = DEMANDES.find(x => x.ref === ref);
+  const ko = document.querySelector('input[name=n1dec]:checked').value === 'ko';
+  const com = $('#n1Com').value.trim(), pad = $('#padManager');
+  let ok = true;
+  $('#eN1Com').textContent = ko && com.length < 10 ? 'Le motif du rejet est obligatoire (10 caractères minimum).' : ''; if (ko && com.length < 10) ok = false;
+  if (!ko) { $('#eSigM').textContent = pad.isEmpty ? 'Votre signature est obligatoire pour valider.' : ''; if (pad.isEmpty) { ok = false; pad.classList.add('invalid'); } }
+  if (!checkCertify('n1Cert')) ok = false;
+  if (!ok) { toast('Complétez votre formulaire de validation'); return; }
   const now = nowIso();
-  const com = $('#vCom').value.trim();
-  Object.assign(d, { statut: 'raf', sigManager: { by: session.id, at: now, img: pad.toDataURL() }, commentaire: com, retourRaf: null });
-  d.historique.push({ at: now, by: session.id, action: 'Validée et signée par le N+1, transmise au RAF/HF', note: com || undefined });
+  if (ko) {
+    Object.assign(d, { statut: 'rejetee', commentaire: com, retourRaf: null, rejetPar: session.id, rejetEtape: 'attente' });
+    d.historique.push({ at: now, by: session.id, action: 'Demande rejetée par le N+1', note: com });
+    notify(d.demandeur, ref, `Votre demande a été rejetée par ${session.name} : « ${com.length > 70 ? com.slice(0, 70) + '…' : com} »`);
+    audit('Demande rejetée (N+1)', ref);
+    toast(`Demande ${ref} rejetée · commentaire envoyé à ${nom(d.demandeur)}`);
+    render();
+    return;
+  }
+  Object.assign(d, { statut: 'raf', sigManager: { by: session.id, at: now, img: pad.toDataURL(), note: com }, commentaire: com, retourRaf: null });
+  seal(d, 'manager');
+  d.historique.push({ at: now, by: session.id, action: 'Validée et signée électroniquement par le N+1, transmise au RAF/HF', note: com || undefined });
   notify(d.demandeur, ref, `Votre demande a été validée par ${session.name} et transmise au RAF/HF.`);
   notify(RAF_ID, ref, `${session.name} a validé une demande de ${nom(d.demandeur)} : elle attend votre validation.`);
-  audit('Demande validée (N+1)', ref);
-  closeModal();
-  toast(`Demande ${ref} validée · transmise à ${nom(RAF_ID)} (RAF/HF)`);
-  render();
-}
-
-function openReject(ref) {
-  const d = DEMANDES.find(x => x.ref === ref);
-  openModal(`
-    <div class="modal-head"><h2>Rejeter la demande</h2><button class="icon-btn" onclick="closeModal()" aria-label="Fermer">${icon('x')}</button></div>
-    <p class="muted" style="margin:0">${d.ref} · ${esc(d.objet)}</p>
-    <div class="field"><label for="rCom">Motif du rejet *</label><textarea class="input" id="rCom" rows="4" placeholder="Expliquez ce qui doit être corrigé. Ce commentaire sera envoyé à ${esc(nom(d.demandeur))}."></textarea><div class="field-error" id="eRCom"></div></div>
-    <div class="modal-actions"><button class="btn btn-ghost" onclick="closeModal()">Annuler</button><button class="btn btn-danger" onclick="confirmReject('${ref}')">${icon('x')} Rejeter et notifier</button></div>`,
-    () => $('#rCom').focus());
-}
-function confirmReject(ref) {
-  const com = $('#rCom').value.trim();
-  if (com.length < 10) { $('#eRCom').textContent = 'Le commentaire est obligatoire (10 caractères minimum).'; $('#rCom').classList.add('invalid'); return; }
-  const d = DEMANDES.find(x => x.ref === ref);
-  const now = nowIso();
-  Object.assign(d, { statut: 'rejetee', commentaire: com, retourRaf: null, rejetPar: session.id, rejetEtape: 'attente' });
-  d.historique.push({ at: now, by: session.id, action: 'Demande rejetée', note: com });
-  notify(d.demandeur, ref, `Votre demande a été rejetée par ${session.name} : « ${com.length > 70 ? com.slice(0, 70) + '…' : com} »`);
-  audit('Demande rejetée', ref);
-  closeModal();
-  toast(`Demande ${ref} rejetée · commentaire envoyé à ${nom(d.demandeur)}`);
+  audit(`Signature électronique · ${LEVELS.manager}`, ref);
+  toast(`Formulaire N+1 signé et verrouillé · transmis à ${nom(RAF_ID)} (RAF/HF)`);
   render();
 }
 
@@ -2219,11 +2375,13 @@ function submitRaf(ref) {
   $('#ePf').textContent = pfOk ? '' : 'Renseignez au moins la proforma 1 (fournisseur, référence et montant).'; if (!pfOk) ok = false;
   ['#pfF0', '#pfR0', '#pfM0'].forEach(id => $(id).classList.toggle('invalid', !pfOk && !$(id).value.trim()));
   $('#eSigR').textContent = sigPad.isEmpty ? 'Votre signature est obligatoire pour valider.' : ''; if (sigPad.isEmpty) { ok = false; sigPad.classList.add('invalid'); }
+  if (!checkCertify('rafCert')) ok = false;
   if (!ok) { toast('Complétez les champs signalés'); return; }
   const now = nowIso();
   Object.assign(d, { statut: 'cfo', sigRaf: { by: session.id, at: now, img: sigPad.toDataURL() }, retourCfo: null,
     raf: { tranche: Number(tr.value), proformas, reserve: $('#rafReserve').value.trim(), date: now } });
-  d.historique.push({ at: now, by: session.id, action: 'Validée et signée par le RAF/HF, transmise au CFO', note: d.raf.reserve ? `Réserve : ${d.raf.reserve}` : undefined });
+  seal(d, 'raf');
+  d.historique.push({ at: now, by: session.id, action: 'Validée et signée électroniquement par le RAF/HF, transmise au CFO', note: d.raf.reserve ? `Réserve : ${d.raf.reserve}` : undefined });
   notify(d.demandeur, ref, `Votre demande a été validée par ${session.name} (RAF/HF) et transmise au CFO.`);
   notify(CFO_ID, ref, `${session.name} (RAF/HF) a validé une demande de ${nom(d.demandeur)} : elle attend votre validation.`);
   audit('Demande validée (RAF/HF)', ref);
@@ -2245,6 +2403,7 @@ function confirmReturn(ref) {
   if (com.length < 10) { $('#eRet').textContent = 'Le commentaire est obligatoire (10 caractères minimum).'; $('#retCom').classList.add('invalid'); return; }
   const d = DEMANDES.find(x => x.ref === ref);
   const now = nowIso();
+  archive(d, 'manager', `retour du RAF/HF le ${fDateTime(now)}`);
   Object.assign(d, { statut: 'attente', sigManager: null, retourCfo: null, retourRaf: { by: session.id, at: now, comment: com } });
   d.historique.push({ at: now, by: session.id, action: 'Retournée au N+1 par le RAF/HF', note: com });
   notify(d.n1, ref, `${session.name} (RAF/HF) vous a retourné une demande : « ${com.length > 70 ? com.slice(0, 70) + '…' : com} »`);
@@ -2279,6 +2438,7 @@ function submitCfo(ref) {
   err('#eCfoL', lettres ? '' : 'Saisissez le montant en lettre.', $('#cfoLettres'));
   err('#eSigC', sigPad.isEmpty ? 'Votre signature est obligatoire pour valider.' : '');
   if (sigPad.isEmpty) sigPad.classList.add('invalid');
+  if (!checkCertify('cfoCert')) ok = false;
   if (!ok) { toast('Complétez les champs signalés'); return; }
   const now = nowIso();
   // Montant validé au-dessus du plafond : la menue dépense bascule automatiquement en bon de commande
@@ -2290,7 +2450,8 @@ function submitCfo(ref) {
   const menue = d.type === 'menue';
   Object.assign(d, { statut: menue ? 'm_raf' : 'bc', achat: null, bcDoc: null, sigCfo: { by: session.id, at: now, img: sigPad.toDataURL() },
     cfo: { proforma: Number(pf), montant, lettres, reserve: $('#cfoReserve').value.trim(), date: now } });
-  d.historique.push({ at: now, by: session.id, action: `Validation (2) et signature CFO · ${fcfa(montant)}`, note: d.cfo.reserve ? `Réserve : ${d.cfo.reserve}` : undefined });
+  seal(d, 'cfo');
+  d.historique.push({ at: now, by: session.id, action: `Validation (2) et signature électronique CFO · ${fcfa(montant)}`, note: d.cfo.reserve ? `Réserve : ${d.cfo.reserve}` : undefined });
   [d.demandeur, d.n1].forEach(to => notify(to, ref, `La FED ${ref} a été validée par ${session.name} (CFO) pour ${fcfa(montant)}.`));
   if (menue) notify(RAF_ID, ref, `FED ${ref} validée : la fiche de menues dépenses attend votre signature.`);
   if (!menue) notify(COMPTA_ID, ref, `FED ${ref} validée pour ${fcfa(montant)} : bon de commande à établir et à délivrer à Facilities.`);
@@ -2313,6 +2474,7 @@ function confirmReturnCfo(ref) {
   if (com.length < 10) { $('#eRetCfo').textContent = 'Le commentaire est obligatoire (10 caractères minimum).'; $('#retCfoCom').classList.add('invalid'); return; }
   const d = DEMANDES.find(x => x.ref === ref);
   const now = nowIso();
+  archive(d, 'raf', `retour du CFO le ${fDateTime(now)}`);
   Object.assign(d, { statut: 'raf', sigRaf: null, retourCfo: { by: session.id, at: now, comment: com } });
   d.historique.push({ at: now, by: session.id, action: 'Retournée au RAF/HF par le CFO', note: com });
   notify(RAF_ID, ref, `${session.name} (CFO) vous a retourné une demande : « ${com.length > 70 ? com.slice(0, 70) + '…' : com} »`);
@@ -2422,7 +2584,8 @@ function buildFedPdf(d) {
         const k = Math.min(maxW / pr.width, maxH / pr.height);
         doc.addImage(img, 'PNG', x + (bw - pr.width * k) / 2, y + 7 + (maxH - pr.height * k) / 2, pr.width * k, pr.height * k);
         doc.setFont('helvetica', 'normal'); doc.setFontSize(7.5); doc.setTextColor(...MUTED);
-        doc.text(`${nom(sig.by)} · ${fDate(sig.at)} à ${fTime(sig.at)}`, x + bw / 2, y + h - 3, { align: 'center' });
+        doc.text(`${nom(sig.by)} · ${fDate(sig.at)} à ${fTime(sig.at)}`, x + bw / 2, y + h - (sig.hash ? 6.5 : 3), { align: 'center' });
+        if (sig.hash) { doc.setFontSize(6.5); doc.text(`Signé électroniquement · empreinte ${sig.hash.slice(0, 24)}…`, x + bw / 2, y + h - 2.5, { align: 'center' }); }
       } else {
         doc.setFont('helvetica', 'italic'); doc.setFontSize(8.5); doc.setTextColor(...MUTED);
         doc.text(waiting, x + bw / 2, y + h / 2 + 2, { align: 'center' });
@@ -2572,7 +2735,7 @@ function buildFedPdf(d) {
     row([['Montant HT en lettres', b.lettres]]);
     row([['Conditions', `– Paiement de ${b.paiement} 100 %   – Mode de paiement : par chèque (APSFD-CI)`]]);
     note(BC_NOTE);
-    row([['Délivré à Facilities', `${fDateTime(b.delivre.at)} par ${nom(b.delivre.by)} (Comptabilité)`]]);
+    row([['Délivré à Facilities', `${fDateTime(b.delivre.at)} par ${nom(b.delivre.by)} (Comptabilité)${b.delivre.hash ? ` · signé électroniquement, empreinte ${b.delivre.hash.slice(0, 24)}…` : ''}`]]);
     signs([['RAMG', null, ''], ['CFO', null, ''], ['Fournisseur', null, '']]);
   }
 

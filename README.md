@@ -27,6 +27,13 @@ Toute demande passe **obligatoirement par la FED** (fiche d'engagement de dépen
 
 Profils de démonstration (sélecteur « Profil (démo) ») : Fatou Diallo (demandeur, compte menues dépenses), Awa Ndiaye (demandeur sans compte), Serge Kouadio (N+1), Carine Toro (RAF/HF), Régis Kouamé (CFO / Direction Centrale), Mariam Yenita Bamba (DG), Paul Yao (Comptabilité), Mireille Gbagbo (administratrice).
 
+## Formulaires par niveau et signature électronique
+- **Chaque niveau de validation a son propre formulaire**, rempli dans le dossier : partie Demandeur de la FED, validation N+1 (décision, commentaire, signature), validation (1) RAF/HF, validation (2) CFO, formulaire de chaque signataire de la fiche de menues dépenses (RAF/HF, Direction Centrale, DG), visa Comptabilité, bon de commande (Comptabilité), confirmation d'achat (Facilities).
+- **Signature électronique** : signature manuscrite à l'écran + attestation obligatoire (« Je certifie l'exactitude des informations… et je signe électroniquement »). Le contenu du formulaire, le signataire, l'horodatage et la version sont scellés par une **empreinte SHA-256**.
+- **Verrouillage** : un formulaire signé n'est plus modifiable ; l'empreinte est revérifiée à chaque affichage (« intégrité vérifiée », ou alerte « modifié après signature »). Le registre « Formulaires signés » liste les formulaires en vigueur.
+- **Versions** : après un retour (RAF/HF → N+1, CFO → RAF/HF) ou un rejet, les formulaires signés concernés sont **archivés, toujours verrouillés**, et le niveau signe une nouvelle version (v2, v3…).
+- Le PDF reprend l'empreinte sous chaque signature.
+
 ## Charte
 - Charte officielle Fin'Elle (filiale du Groupe Cofina) : **rouge #DC092F** et **gris #646363** du logo, fond blanc, cartes gris clair.
 - Logo officiel en haut à gauche et dans l'en-tête des PDF (`maquette/assets/`, extrait de la fiche de menues dépenses).
