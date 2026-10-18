@@ -18,17 +18,17 @@ Toute demande passe **obligatoirement par la FED** (fiche d'engagement de dépen
 1. **FED** : le demandeur remplit et signe → **N+1** (valide en signant ou rejette avec commentaire) → **RAF/HF** (montant achat, proformas, réserve, signature, ou retour au N+1) → **CFO** (proforma retenue, montant en chiffre et en lettre, réserve, signature, ou retour au RAF/HF).
 2. Puis, selon le type :
    - **Bon de commande** (05SUP03V03) : établi par la **Comptabilité** (fournisseur, lignes, montant à payer, montant HT en lettres, conditions) et **délivré à Facilities** ; les cases RAMG, CFO et Fournisseur sont à signer sur le bon imprimé.
-   - **Menue dépense** : fiche de menues dépenses (Version 01) signée par le **RAF/HF**, la **Direction Centrale**, la **Direction Générale si le montant est ≥ 150 001 FCFA**, puis visée par la **Comptabilité** (référence N°, évolution budgétaire, imputation, désignation, pièces justificatives, visa). Chaque signataire peut rejeter avec un commentaire.
+   - **Menue dépense** : la validation s'arrête au **CFO** (plus de volet « Validation de la hiérarchie »). Facilities effectue l'achat sous 72 h, puis la **Comptabilité** vise la fiche de menues dépenses (Version 01) : référence N°, évolution budgétaire, imputation, désignation, pièces justificatives, visa. La Comptabilité peut rejeter avec un commentaire.
 3. **Achat · Facilities (72 h)** : toutes les personnes du service **FACILITIES** (sauf pour leurs propres demandes) tirent la FED en PDF (sans filigrane) et doivent effectuer l'achat **sous 72 h** :
    - **Bon de commande** : le délai démarre à la délivrance du bon par la Comptabilité ; la demande est clôturée quand Facilities confirme l'achat ;
-   - **Menue dépense** : le délai démarre au décaissement, c'est-à-dire quand la fiche de menues dépenses est signée (RAF/HF, Direction Centrale, et DG si ≥ 150 001 FCFA).
+   - **Menue dépense** : le délai démarre à la validation de la FED par le CFO.
    L'écran « Achats à traiter » classe les achats par échéance avec un compte à rebours (reste X h, en retard de X h) ; Facilities confirme l'achat (fournisseur, montant payé, facture).
 4. Chaque décision est notifiée et tracée (historique de la demande et journal d'audit).
 
 Profils de démonstration (sélecteur « Profil (démo) ») : Fatou Diallo (demandeur, compte menues dépenses), Awa Ndiaye (demandeur sans compte), Serge Kouadio (N+1), Carine Toro (RAF/HF), Régis Kouamé (CFO / Direction Centrale), Mariam Yenita Bamba (DG), Paul Yao (Comptabilité), Mireille Gbagbo (administratrice).
 
 ## Formulaires par niveau et signature électronique
-- **Chaque niveau de validation a son propre formulaire**, rempli dans le dossier : partie Demandeur de la FED, validation N+1 (décision, commentaire, signature), validation (1) RAF/HF, validation (2) CFO, formulaire de chaque signataire de la fiche de menues dépenses (RAF/HF, Direction Centrale, DG), visa Comptabilité, bon de commande (Comptabilité), confirmation d'achat (Facilities).
+- **Chaque niveau de validation a son propre formulaire**, rempli dans le dossier : partie Demandeur de la FED, validation N+1 (décision, commentaire, signature), validation (1) RAF/HF, validation (2) CFO, formulaire de chaque signataire de la visa Comptabilité de la fiche de menues dépenses, bon de commande (Comptabilité), confirmation d'achat (Facilities).
 - **Signature électronique** : signature manuscrite à l'écran + attestation obligatoire (« Je certifie l'exactitude des informations… et je signe électroniquement »). Le contenu du formulaire, le signataire, l'horodatage et la version sont scellés par une **empreinte SHA-256**.
 - **Verrouillage** : un formulaire signé n'est plus modifiable ; l'empreinte est revérifiée à chaque affichage (« intégrité vérifiée », ou alerte « modifié après signature »). Le registre « Formulaires signés » liste les formulaires en vigueur.
 - **Versions** : après un retour (RAF/HF → N+1, CFO → RAF/HF) ou un rejet, les formulaires signés concernés sont **archivés, toujours verrouillés**, et le niveau signe une nouvelle version (v2, v3…).
