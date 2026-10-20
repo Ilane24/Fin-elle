@@ -8,7 +8,7 @@ Ouvrir `maquette/index.html` dans un navigateur, puis cliquer sur « Se connecte
 - Une **menue dépense** n'est possible que si le demandeur a un compte menues dépenses ; l'administrateur peut l'ouvrir ou le fermer depuis « Utilisateurs & rôles ».
 
 ## PDF
-Sur chaque demande, le bouton **PDF** télécharge la FED dans son état actuel (sections remplies, signatures, historique), avec un filigrane « EN COURS DE VALIDATION » tant qu'elle n'est pas validée. Accessible à tout utilisateur qui peut consulter la demande.
+Tant que la demande est en cours de validation, le bouton **PDF** télécharge la FED dans son état actuel (sections remplies, signatures, historique), avec un filigrane « EN COURS DE VALIDATION ». Il est accessible à tout utilisateur qui peut consulter la demande. Une fois toutes les étapes de validation franchies, seules les personnes du service FACILITIES peuvent tirer la **FED finale** (sans filigrane), sauf pour leurs propres demandes ; les autres voient « FED finale réservée à Facilities ».
 
 ## Circuit
 Toute demande passe **obligatoirement par la FED** (fiche d'engagement de dépenses, 05SUP02V03). En « Nouvelle demande », le demandeur choisit le **type de demande** :

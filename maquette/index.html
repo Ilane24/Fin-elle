@@ -967,7 +967,7 @@ function audit(action, cible = '—') {
   AUDIT.unshift({ at: nowIso(), user: session.id, action, cible, ip: '10.0.3.17' });
 }
 function notify(to, ref, text) { if (to) NOTIFS.unshift({ to, at: nowIso(), ref, text, lu: false }); }
-// Le droit « achats » (tirer la FED et traiter l'achat) revient à toutes les personnes du service FACILITIES.
+// Le droit « achats » (traiter l'achat ; la FED finale se tire via canPdf) revient à toutes les personnes du service FACILITIES.
 const SERVICE_ACHATS = 'FACILITIES';
 const can = perm => !!session && [].concat(perm).some(p => ROLES[session.role].perms.includes(p)
   || (p === 'achats' && userById(session.id)?.service === SERVICE_ACHATS));
@@ -992,6 +992,10 @@ function achatDebut(d) {
   return d.sigs?.[last]?.at || null;
 }
 const achatPending = d => !!achatDebut(d) && !d.achat?.fait;
+// FED finale : toutes les étapes de validation sont franchies. Seul Facilities peut alors la tirer.
+const fedFinale = d => !!achatDebut(d);
+const estFacilities = () => userById(session.id)?.service === SERVICE_ACHATS;
+const canPdf = d => !fedFinale(d) || (estFacilities() && d.demandeur !== session.id);
 const achatEcheance = d => isoPlus(achatDebut(d), ACHAT_DELAI_H);
 const heuresEntre = (a, b) => (toDate(b) - toDate(a)) / 36e5;
 function slaBadge(d) {
@@ -1622,9 +1626,11 @@ function viewDemande(ref) {
     });
     bcTotals();
   };
-  const pdfBtn = isAchat
-    ? `<button class="btn btn-ghost" onclick="downloadFed('${d.ref}')" title="Télécharger la FED validée">${icon('download')} Tirer la FED</button>`
-    : `<button class="btn btn-ghost" onclick="downloadFed('${d.ref}')" title="Télécharger la fiche dans son état actuel">${icon('download')} PDF</button>`;
+  const pdfBtn = !fedFinale(d)
+    ? `<button class="btn btn-ghost" onclick="downloadFed('${d.ref}')" title="Télécharger la fiche dans son état actuel">${icon('download')} PDF</button>`
+    : canPdf(d)
+      ? `<button class="btn btn-ghost" onclick="downloadFed('${d.ref}')" title="Télécharger la FED finale">${icon('download')} Tirer la FED</button>`
+      : `<span class="badge b-neutral" title="Toutes les validations sont franchies : la FED finale est réservée au service ${SERVICE_ACHATS}">${icon('lock')} FED finale réservée à Facilities</span>`;
   const actions = pdfBtn + (isBcCompta ? `
     <button class="btn btn-primary" onclick="document.getElementById('bcForm').scrollIntoView({behavior:'smooth'})">${icon('file')} Établir le bon de commande</button>` : isAchat ? `
     <button class="btn btn-primary" onclick="openAchat('${d.ref}')">${icon('check')} Confirmer l'achat effectué</button>` : isMenueActor ? `
@@ -2147,7 +2153,7 @@ function viewAchats() {
       <td>${fDateTime(achatDebut(d))}</td>
       <td>${done ? fDateTime(d.achat.fait.at) : fDateTime(achatEcheance(d))}</td>
       <td>${slaBadge(d)}</td>
-      <td><button class="btn btn-ghost btn-sm" onclick="event.stopPropagation();downloadFed('${d.ref}')">${icon('download')} FED</button></td>
+      <td>${canPdf(d) ? `<button class="btn btn-ghost btn-sm" onclick="event.stopPropagation();downloadFed('${d.ref}')">${icon('download')} FED</button>` : ''}</td>
     </tr>`).join('')}</tbody></table></div>` : `<div class="card muted" style="text-align:center;padding:28px">${done ? 'Aucun achat effectué pour le moment.' : `${icon('check')} Aucun achat en attente.`}</div>`;
   return `
     ${pageHead('Achats à traiter', 'Tirez la FED, effectuez l\'achat et confirmez-le sous 72 h : à partir de la validation du CFO (FED seule) ou du décaissement (menue dépense, fiche signée).')}
@@ -2236,7 +2242,7 @@ function viewUsers() {
     </table></div>
     <div class="card">
       <div class="card-head"><h2>Matrice des droits</h2>${icon('lock')}</div>
-      <p class="hint" style="margin:-4px 0 12px">${icon('wallet')} Tirer la FED et traiter l'achat (72 h) : toutes les personnes du service ${SERVICE_ACHATS}, sauf pour leurs propres demandes.</p>
+      <p class="hint" style="margin:-4px 0 12px">${icon('wallet')} Tirer la FED finale (une fois toutes les validations franchies) et traiter l'achat (72 h) : uniquement les personnes du service ${SERVICE_ACHATS}, sauf pour leurs propres demandes. Avant, tout utilisateur qui voit la demande peut tirer le PDF en cours, avec filigrane.</p>
       <div class="table-wrap"><table class="matrix">
         <thead><tr><th>Permission</th>${Object.values(ROLES).map(r => `<th>${r.label}</th>`).join('')}</tr></thead>
         <tbody>${Object.entries(PERM_LABELS).map(([p, l]) => `<tr><td>${l}</td>${Object.values(ROLES).map(r => `<td>${r.perms.includes(p) ? `<span class="check">${icon('check')}</span>` : '<span class="nope">—</span>'}</td>`).join('')}</tr>`).join('')}</tbody>
@@ -2494,11 +2500,12 @@ function toggleMenues(id, on) {
 }
 
 /* =========================================================
-   Export PDF de la FED, dans son état actuel
+   Export PDF de la FED : en cours (filigrane) pour tous, finale pour Facilities uniquement
    ========================================================= */
 async function downloadFed(ref) {
   const d = DEMANDES.find(x => x.ref === ref);
   if (!window.jspdf) { toast('Génération PDF indisponible (connexion requise)'); return; }
+  if (!canPdf(d)) { audit('Export PDF refusé (FED finale réservée à Facilities)', d.ref); toast(`La FED finale est réservée au service ${SERVICE_ACHATS}`); return; }
   const doc = buildFedPdf(d);
   const filename = `${d.ref}.pdf`;
   audit('Export PDF', d.ref);
@@ -2523,10 +2530,9 @@ function buildFedPdf(d) {
   const u = userById(d.demandeur);
   const room = h => { if (y + h > BOTTOM) { doc.addPage(); y = 16; } };
 
-  // Filigrane tant que la fiche n'est pas entièrement validée
-  // Filigrane tant que la FED n'est pas validée par le CFO (Facilities tire une FED « propre »)
+  // Filigrane tant que toutes les étapes de validation ne sont pas franchies (Facilities tire une FED finale « propre »)
   const watermark = () => {
-    if (d.sigCfo && d.statut !== 'rejetee') return;
+    if (fedFinale(d)) return;
     doc.saveGraphicsState(); doc.setGState(new doc.GState({ opacity: 0.08 }));
     doc.setFont('helvetica', 'bold'); doc.setFontSize(46); doc.setTextColor(...ACCENT);
     doc.text(d.statut === 'rejetee' ? 'REJETÉE' : 'EN COURS DE VALIDATION', W / 2, 160, { align: 'center', angle: 35 });
