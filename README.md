@@ -4,7 +4,8 @@ Maquette interactive (HTML/CSS/JS, sans dépendance) du circuit de **fiche d'eng
 Ouvrir `maquette/index.html` dans un navigateur, puis cliquer sur « Se connecter » (champs pré-remplis).
 
 ## Comptes
-- **Connexion** (e-mail du domaine + mot de passe) ou **création de compte** : identification (nom, prénom, matricule, téléphone, e-mail professionnel), compte (fonction, service, N+1, mot de passe) et option **compte menues dépenses**.
+- **Connexion** (e-mail du domaine + mot de passe) ou **création de compte** : identification (nom, prénom, matricule, téléphone, e-mail professionnel), compte (fonction, **département**, service, N+1, mot de passe) et option **compte menues dépenses**.
+- **Départements** : chaque utilisateur appartient à un département, choisi à l'inscription. Le service et le N+1 proposés sont ceux de ce département : un N+1 d'un autre département ne peut pas signer la FED (contrôlé à l'inscription, à l'envoi de la FED et à la signature du N+1 ; toute tentative est tracée).
 - Une **menue dépense** n'est possible que si le demandeur a un compte menues dépenses ; l'administrateur peut l'ouvrir ou le fermer depuis « Utilisateurs & rôles ».
 
 ## PDF
@@ -25,7 +26,7 @@ Toute demande passe **obligatoirement par la FED** (fiche d'engagement de dépen
    L'écran « Achats à traiter » classe les achats par échéance avec un compte à rebours (reste X h, en retard de X h) ; Facilities confirme l'achat (fournisseur, montant payé, facture).
 4. Chaque décision est notifiée et tracée (historique de la demande et journal d'audit).
 
-Profils de démonstration (sélecteur « Profil (démo) ») : Fatou Diallo (demandeur, compte menues dépenses), Awa Ndiaye (demandeur sans compte), Serge Kouadio (N+1), Carine Toro (RAF/HF), Régis Kouamé (CFO / Direction Centrale), Mariam Yenita Bamba (DG), Paul Yao (Comptabilité), Mireille Gbagbo (administratrice).
+Profils de démonstration (sélecteur « Profil (démo) ») : Fatou Diallo (demandeur, compte menues dépenses), Awa Ndiaye (demandeur sans compte), Serge Kouadio (N+1), Carine Toro (RAF/HF), Régis Kouamé (CFO / Direction Centrale), Mariam Yenita Bamba (DG), Paul Yao (Comptabilité), Mireille Gbagbo (administratrice), ainsi que les responsables Aminata Koné (RH), Yves Brou (Informatique), Nadia Cissé (Commercial) et Éric Konan (demandeur, Commercial).
 
 ## Formulaires par niveau et signature électronique
 - **Chaque niveau de validation a son propre formulaire**, rempli dans le dossier : partie Demandeur de la FED, validation N+1 (décision, commentaire, signature), validation (1) RAF/HF, validation (2) CFO, formulaire de chaque signataire de la fiche de menues dépenses (RAF/HF, Direction Centrale, DG), visa Comptabilité, bon de commande (Comptabilité), confirmation d'achat (Facilities).

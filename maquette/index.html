@@ -616,8 +616,9 @@ label.tranche:hover { border-color: var(--accent); color: var(--accent); }
       <h3 class="form-part">Compte</h3>
       <div class="form-grid">
         <div class="field"><label for="rFonction">Fonction *</label><input class="input" id="rFonction" placeholder="Ex. Assistante administrative"><div class="field-error"></div></div>
-        <div class="field"><label for="rService">Service *</label><select class="input" id="rService"></select><div class="field-error"></div></div>
-        <div class="field full"><label for="rN1">Supérieur hiérarchique (N+1) *</label><select class="input" id="rN1"></select><div class="field-error"></div></div>
+        <div class="field"><label for="rDept">Département *</label><select class="input" id="rDept"></select><div class="field-error"></div></div>
+        <div class="field"><label for="rService">Service *</label><select class="input" id="rService" disabled><option value="">Choisissez d'abord le département</option></select><div class="field-error"></div></div>
+        <div class="field"><label for="rN1">Supérieur hiérarchique (N+1) *</label><select class="input" id="rN1" disabled><option value="">Choisissez d'abord le département</option></select><div class="field-error"></div><p class="hint" style="margin:4px 0 0">Seuls les responsables de votre département peuvent signer vos FED.</p></div>
         <div class="field"><label for="rPwd">Mot de passe *</label><input class="input" id="rPwd" type="password" autocomplete="new-password" placeholder="8 caractères dont 1 chiffre"><div class="field-error"></div></div>
         <div class="field"><label for="rPwd2">Confirmation *</label><input class="input" id="rPwd2" type="password" autocomplete="new-password" placeholder="••••••••"><div class="field-error"></div></div>
       </div>
@@ -767,7 +768,11 @@ const USERS = [
   { id: 'mariam.bamba',    nom: 'Mariam Yenita Bamba', fonction: 'Directrice Générale', service: 'DIRECTION GÉNÉRALE', role: 'dg', n1: null, actif: true, derniere: '2026-10-13T18:20' },
   { id: 'paul.yao',        nom: 'Paul Yao',        fonction: 'Comptable', service: 'COMPTABILITÉ', role: 'compta', n1: 'regis.kouame', actif: true, derniere: '2026-10-14T08:30' },
   { id: 'koffi.nguessan',  nom: 'Koffi N\'Guessan', fonction: 'Agent logistique (achats)', service: 'FACILITIES', role: 'demandeur', n1: 'serge.kouadio', actif: true, derniere: '2026-10-14T08:20' },
-  { id: 'mireille.gbagbo', nom: 'Mireille Gbagbo', fonction: 'Directrice administrative', service: 'DIRECTION',  role: 'admin',     n1: null,              actif: true,  derniere: '2026-10-12T11:22' },
+  { id: 'aminata.kone',    nom: 'Aminata Koné',    fonction: 'Responsable Ressources Humaines', service: 'RESSOURCES HUMAINES', role: 'manager', n1: null, actif: true, derniere: '2026-10-13T16:10' },
+  { id: 'yves.brou',       nom: 'Yves Brou',       fonction: 'Responsable Informatique',  service: 'INFORMATIQUE', role: 'manager', n1: null, actif: true, derniere: '2026-10-14T07:42' },
+  { id: 'nadia.cisse',     nom: 'Nadia Cissé',     fonction: 'Directrice Commerciale',    service: 'COMMERCIAL', role: 'manager', n1: null, actif: true, derniere: '2026-10-14T08:48' },
+  { id: 'eric.konan',      nom: 'Éric Konan',      fonction: 'Chargé de clientèle',       service: 'COMMERCIAL', role: 'demandeur', n1: 'nadia.cisse', actif: true, derniere: '2026-10-13T15:05' },
+  { id: 'mireille.gbagbo', nom: 'Mireille Gbagbo', fonction: 'Directrice administrative', service: 'DIRECTION ADMINISTRATIVE', role: 'admin',     n1: null,              actif: true,  derniere: '2026-10-12T11:22' },
   { id: 'binta.sow',       nom: 'Binta Sow',       fonction: 'Agente d\'accueil',         service: 'FACILITIES', role: 'demandeur', n1: 'serge.kouadio',   actif: false, derniere: '2026-08-28T16:30' },
 ];
 const userById = id => USERS.find(u => u.id === id);
@@ -777,7 +782,22 @@ USERS.forEach(u => { u.menues = ['fatou.diallo', 'ibrahim.toure', 'serge.kouadio
 let nextCompte = 1;
 const ensureCompte = u => { if (u.menues && !u.compteMD) u.compteMD = `CMD-2026-${String(nextCompte++).padStart(3, '0')}`; };
 USERS.forEach(ensureCompte);
-const SERVICES = ['FACILITIES', 'ACHATS & MOYENS GÉNÉRAUX', 'FINANCE', 'DIRECTION', 'RESSOURCES HUMAINES', 'INFORMATIQUE', 'COMMERCIAL'];
+// Chaque utilisateur appartient à un département (choisi à l'inscription), qui regroupe des services.
+// Son N+1 doit appartenir au même département : un N+1 d'un autre département ne peut pas signer sa FED.
+const DEPARTEMENTS = {
+  'ADMINISTRATION & LOGISTIQUE': ['DIRECTION ADMINISTRATIVE', 'FACILITIES', 'ACHATS & MOYENS GÉNÉRAUX'],
+  'FINANCE & COMPTABILITÉ': ['FINANCE', 'COMPTABILITÉ'],
+  'DIRECTION GÉNÉRALE': ['DIRECTION GÉNÉRALE'],
+  'RESSOURCES HUMAINES': ['RESSOURCES HUMAINES'],
+  'SYSTÈMES D\'INFORMATION': ['INFORMATIQUE'],
+  'COMMERCIAL': ['COMMERCIAL'],
+};
+const SERVICES = Object.values(DEPARTEMENTS).flat();
+const deptOfService = s => Object.keys(DEPARTEMENTS).find(k => DEPARTEMENTS[k].includes(s)) || null;
+USERS.forEach(u => { u.dept = u.dept || deptOfService(u.service); });
+const memeDept = (a, b) => !!userById(a)?.dept && userById(a).dept === userById(b)?.dept;
+// Le N+1 n'est habilité à signer la FED que s'il appartient au département du demandeur
+const n1Habilite = d => memeDept(d.n1, d.demandeur);
 // Toute demande passe par la FED, puis par une fiche de menues dépenses (≤ 250 000 FCFA)
 // ou par un bon de commande établi par la Comptabilité et délivré à Facilities.
 const TYPES = { menue: 'Menue dépense', bc: 'Bon de commande' };
@@ -1031,9 +1051,19 @@ renderDemoAccounts();
 const showRegister = on => { $('.login-card:not(.register-card)').classList.toggle('hidden', on); $('#registerCard').classList.toggle('hidden', !on); window.scrollTo(0, 0); };
 $('#toRegister').addEventListener('click', () => showRegister(true));
 $('#toLogin').addEventListener('click', () => showRegister(false));
-$('#rService').innerHTML = `<option value="">Choisir…</option>` + SERVICES.map(s => `<option>${s}</option>`).join('');
-const fillN1 = () => { $('#rN1').innerHTML = `<option value="">Choisir…</option>` + USERS.filter(u => u.actif && u.role !== 'demandeur').map(u => `<option value="${u.id}">${u.nom} – ${u.fonction}</option>`).join(''); };
-fillN1();
+$('#rDept').innerHTML = `<option value="">Choisir…</option>` + Object.keys(DEPARTEMENTS).map(k => `<option>${k}</option>`).join('');
+// Le service et le N+1 proposés dépendent du département choisi
+const fillDept = () => {
+  const dept = $('#rDept').value;
+  const n1s = USERS.filter(u => u.actif && u.role !== 'demandeur' && u.dept === dept);
+  $('#rService').disabled = $('#rN1').disabled = !dept;
+  $('#rService').innerHTML = !dept ? `<option value="">Choisissez d'abord le département</option>`
+    : `<option value="">Choisir…</option>` + DEPARTEMENTS[dept].map(s => `<option>${s}</option>`).join('');
+  $('#rN1').innerHTML = !dept ? `<option value="">Choisissez d'abord le département</option>`
+    : n1s.length ? `<option value="">Choisir…</option>` + n1s.map(u => `<option value="${u.id}">${u.nom} – ${u.fonction}</option>`).join('')
+    : `<option value="">Aucun responsable dans ce département</option>`;
+};
+$('#rDept').addEventListener('change', fillDept);
 $('#registerForm').addEventListener('input', e => {
   e.target.classList.remove('invalid');
   const err = e.target.closest('.field')?.querySelector('.field-error'); if (err) err.textContent = '';
@@ -1050,8 +1080,10 @@ $('#registerForm').addEventListener('submit', e => {
       : email.split('@')[1] !== ALLOWED_DOMAIN ? `Utilisez votre adresse @${ALLOWED_DOMAIN}.`
       : userById(email.split('@')[0]) ? 'Un compte existe déjà avec cette adresse.' : ''],
     ['#rFonction', v('#rFonction') ? '' : 'Saisissez votre fonction.'],
-    ['#rService', v('#rService') ? '' : 'Choisissez votre service.'],
-    ['#rN1', v('#rN1') ? '' : 'Choisissez votre N+1.'],
+    ['#rDept', v('#rDept') ? '' : 'Choisissez votre département.'],
+    ['#rService', !v('#rDept') ? '' : DEPARTEMENTS[v('#rDept')].includes(v('#rService')) ? '' : 'Choisissez votre service.'],
+    ['#rN1', !v('#rDept') ? '' : !v('#rN1') ? 'Choisissez votre N+1.'
+      : userById(v('#rN1'))?.dept !== v('#rDept') ? 'Votre N+1 doit appartenir à votre département.' : ''],
     ['#rPwd', /^(?=.*\d).{8,}$/.test($('#rPwd').value) ? '' : '8 caractères minimum, dont au moins 1 chiffre.'],
     ['#rPwd2', $('#rPwd2').value && $('#rPwd2').value === $('#rPwd').value ? '' : 'Les deux mots de passe ne correspondent pas.'],
   ];
@@ -1066,7 +1098,7 @@ $('#registerForm').addEventListener('submit', e => {
   if (!ok) { $('#registerError').textContent = 'Corrigez les champs signalés.'; return; }
   $('#registerError').textContent = '';
   const cap = w => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase();
-  const u = { id: email.split('@')[0], nom: `${cap(v('#rPrenom'))} ${v('#rNom').toUpperCase()}`, fonction: v('#rFonction'), service: v('#rService'),
+  const u = { id: email.split('@')[0], nom: `${cap(v('#rPrenom'))} ${v('#rNom').toUpperCase()}`, fonction: v('#rFonction'), dept: v('#rDept'), service: v('#rService'),
     matricule: v('#rMatricule'), tel: v('#rTel'), role: 'demandeur', n1: v('#rN1'), actif: true, derniere: nowIso(), menues: $('#rMenues').checked };
   USERS.push(u);
   ensureCompte(u);
@@ -1076,6 +1108,7 @@ $('#registerForm').addEventListener('submit', e => {
   if (u.menues) audit('Ouverture compte menues dépenses', u.id);
   audit('Connexion');
   $('#registerForm').reset();
+  fillDept();
   showRegister(false);
   $('#login').classList.add('hidden');
   $('#app').classList.remove('hidden');
@@ -1394,7 +1427,8 @@ function n1Dec() {
 /* La fiche, au format du formulaire papier 05SUP02V03 */
 function ficheView(d) {
   const u = userById(d.demandeur);
-  const managerBox = d.statut === 'attente' && session.id === d.n1 ? n1FormHtml(d)
+  const managerBox = d.statut === 'attente' && session.id === d.n1 && n1Habilite(d) ? n1FormHtml(d)
+    : d.statut === 'attente' && !n1Habilite(d) ? `<div class="sign-box" style="color:var(--danger)">${icon('lock')}&nbsp;${esc(nom(d.n1))} n'appartient pas au département du demandeur : signature impossible</div><div class="sign-meta">&nbsp;</div>`
     : d.statut === 'rejetee' && d.rejetEtape === 'attente'
     ? `<div class="sign-box" style="color:var(--danger)">${icon('x')}&nbsp;Rejetée par ${esc(nom(d.rejetPar || d.n1))}</div><div class="sign-meta">&nbsp;</div>`
     : signatureBlock(d.sigManager, `${icon('clock')}&nbsp;En attente de ${esc(nom(d.n1))}`, d, 'manager');
@@ -1415,7 +1449,7 @@ function ficheView(d) {
       </div>
       <div class="fiche-signs">
         <div class="fiche-sign"><h3>Signature Demandeur</h3>${signatureBlock(d.sigDemandeur, 'Non signée', d, 'demandeur')}</div>
-        <div class="fiche-sign"><h3>${d.statut === 'attente' && session.id === d.n1 ? 'Votre validation (N+1) *' : 'Signature Manager'}</h3>${managerBox}</div>
+        <div class="fiche-sign"><h3>${d.statut === 'attente' && session.id === d.n1 && n1Habilite(d) ? 'Votre validation (N+1) *' : 'Signature Manager'}</h3>${managerBox}</div>
       </div>
       ${rafSection(d)}
       ${cfoSection(d)}
@@ -1586,7 +1620,7 @@ function viewDemande(ref) {
   if (!d || !visible().includes(d)) return pageHead('Demande introuvable', "Cette demande n'existe pas ou ne vous est pas accessible.", `<a class="btn btn-ghost" href="#/demandes">Retour</a>`);
   audit('Consultation', d.ref);
   NOTIFS.filter(x => x.to === session.id && x.ref === ref).forEach(x => x.lu = true);
-  const isN1 = d.n1 === session.id && d.statut === 'attente';
+  const isN1 = d.n1 === session.id && d.statut === 'attente' && n1Habilite(d);
   const isOwner = d.demandeur === session.id;
   const isRaf = session.id === RAF_ID && d.statut === 'raf';
   const isCfo = session.id === CFO_ID && d.statut === 'cfo';
@@ -1740,7 +1774,9 @@ function viewNouvelle(ref) {
     menueMontantChange();
   };
   return `
-    ${pageHead(src ? 'Corriger la demande' : 'Nouvelle demande', manager ? `Une fois signée, la fiche sera transmise à ${esc(manager.nom)} (${esc(manager.fonction)}) pour validation.` : "Aucun N+1 n'est défini pour votre compte : contactez l'administrateur.", '', crumbs(src ? draftRef : 'Nouvelle demande'))}
+    ${pageHead(src ? 'Corriger la demande' : 'Nouvelle demande', !manager ? "Aucun N+1 n'est défini pour votre compte : contactez l'administrateur."
+      : !memeDept(manager.id, me.id) ? `Votre N+1 (${esc(manager.nom)}) n'appartient pas à votre département : contactez l'administrateur.`
+      : `Une fois signée, la fiche sera transmise à ${esc(manager.nom)} (${esc(manager.fonction)}, ${esc(me.dept)}) pour validation.`, '', crumbs(src ? draftRef : 'Nouvelle demande'))}
     ${src ? `<div class="alert alert-danger">${icon('message')}<div><b>Commentaire de ${esc(nom(src.n1))}</b><p>« ${esc(src.commentaire)} »</p></div></div>` : ''}
     ${typeCard}
     <form class="fiche" id="ficheForm" novalidate>
@@ -2227,15 +2263,15 @@ function confirmAchat(ref) {
 
 function viewUsers() {
   return `
-    ${pageHead('Utilisateurs & rôles', `Accès limité aux adresses @${ALLOWED_DOMAIN}. Le N+1 reçoit les demandes à valider.`, `<button class="btn btn-primary" onclick="toast('Invitation envoyée (démo)'); audit('Invitation utilisateur')">${icon('plus', 'i-plus')} Inviter</button>`)}
+    ${pageHead('Utilisateurs & rôles', `Accès limité aux adresses @${ALLOWED_DOMAIN}. Chaque utilisateur appartient à un département ; son N+1, qui signe ses FED, appartient au même département.`, `<button class="btn btn-primary" onclick="toast('Invitation envoyée (démo)'); audit('Invitation utilisateur')">${icon('plus', 'i-plus')} Inviter</button>`)}
     <div class="table-wrap"><table>
-      <thead><tr><th>Utilisateur</th><th>E-mail</th><th>Fonction</th><th>Service</th><th>Rôle</th><th>N+1</th><th>Menues dépenses</th><th>Statut</th><th>Dernière connexion</th></tr></thead>
+      <thead><tr><th>Utilisateur</th><th>E-mail</th><th>Fonction</th><th>Département · service</th><th>Rôle</th><th>N+1</th><th>Menues dépenses</th><th>Statut</th><th>Dernière connexion</th></tr></thead>
       <tbody>${USERS.map(u => `<tr>
         <td><div class="who"><div class="avatar">${initials(u.nom)}</div><b>${esc(u.nom)}</b></div></td>
         <td class="muted">${u.id}@${ALLOWED_DOMAIN}</td>
-        <td>${esc(u.fonction)}</td><td>${u.service}</td>
+        <td>${esc(u.fonction)}</td><td><b>${esc(u.dept || '—')}</b><div class="muted" style="font-size:12px">${esc(u.service)}</div></td>
         <td>${ROLES[u.role].label}</td>
-        <td>${u.n1 ? esc(nom(u.n1)) : '<span class="muted">—</span>'}</td>
+        <td>${!u.n1 ? '<span class="muted">—</span>' : memeDept(u.n1, u.id) ? esc(nom(u.n1)) : `${esc(nom(u.n1))}<div><span class="badge b-danger">${icon('x')} Autre département</span></div>`}</td>
         <td><label class="switch" title="Compte menues dépenses"><input type="checkbox" ${u.menues ? 'checked' : ''} onchange="toggleMenues('${u.id}', this.checked)"><span></span></label>${u.menues && u.compteMD ? `<div class="ref">${u.compteMD}</div>` : ''}</td>
         <td>${u.actif ? '<span class="badge b-success">Actif</span>' : '<span class="badge b-neutral">Désactivé</span>'}</td>
         <td>${fDateTime(u.derniere)}</td></tr>`).join('')}</tbody>
@@ -2293,6 +2329,7 @@ function submitFiche(resubmitRef) {
   const sigPad = $('#padDemandeur');
   const type = newType;
   const me0 = userById(session.id);
+  if (!memeDept(me0.n1, me0.id)) { toast('Votre N+1 doit appartenir à votre département : contactez l\'administrateur.'); return; }
   if (type === 'menue' && !me0.menues) { toast('Une menue dépense nécessite un compte menues dépenses.'); return; } // refait côté serveur dans l'appli réelle
   if (type === 'menue' && Number($('#fMontant').value.replace(/\D/g, '')) > PLAFOND_MENUE) { setType('bc'); toast(`Au-delà de ${fcfa(PLAFOND_MENUE)}, la demande passe en bon de commande.`); return; }
   let ok = true;
@@ -2341,6 +2378,7 @@ document.addEventListener('keydown', e => { if (e.key === 'Escape') closeModal()
 
 function submitN1(ref) {
   const d = DEMANDES.find(x => x.ref === ref);
+  if (!n1Habilite(d)) { audit('Signature N+1 refusée (autre département)', ref); toast('Vous n\'appartenez pas au département du demandeur : vous ne pouvez pas signer cette FED.'); return; }
   const ko = document.querySelector('input[name=n1dec]:checked').value === 'ko';
   const com = $('#n1Com').value.trim(), pad = $('#padManager');
   let ok = true;
