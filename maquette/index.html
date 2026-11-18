@@ -569,6 +569,61 @@ label.tranche:hover { border-color: var(--accent); color: var(--accent); }
 
 /* Enregistrement de la signature de référence */
 .enroll-card { max-width: 920px; }
+.stepper { list-style: none; margin: 20px 0 0; padding: 0; display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); counter-reset: none; }
+.stepper li { position: relative; display: grid; justify-items: center; gap: 6px; text-align: center; font-size: 12px; color: var(--text-muted); }
+.stepper li::before { content: ""; position: absolute; top: 15px; left: calc(-50% + 18px); right: calc(50% + 18px); height: 2px; background: var(--border); transition: background var(--t) var(--ease); }
+.stepper li:first-child::before { display: none; }
+.stepper li.done::before, .stepper li.current::before { background: var(--accent); }
+.stepper .dot { width: 32px; height: 32px; border-radius: 50%; display: grid; place-items: center; font-weight: 700; font-size: 13px; background: var(--bg); border: 2px solid var(--border); color: var(--text-muted); transition: all var(--t) var(--ease); }
+.stepper .dot .i { width: 15px; height: 15px; }
+.stepper li.done .dot { background: var(--accent); border-color: var(--accent); color: #fff; }
+.stepper li.current .dot { border-color: var(--accent); color: var(--accent); box-shadow: 0 0 0 5px var(--accent-soft); }
+.stepper li.current { color: var(--text); font-weight: 600; }
+.stepper li.done { cursor: pointer; }
+.stepper li.done:hover .dot { transform: scale(1.08); }
+.enroll-body { margin-top: 20px; animation: fade .3s var(--ease) both; }
+.enroll-intro { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+.tip { display: flex; gap: 12px; padding: 14px; border: 1px solid var(--border); border-radius: var(--radius); background: var(--surface); transition: border-color var(--t) var(--ease), transform var(--t) var(--ease); }
+.tip:hover { border-color: #D7DAE0; transform: translateY(-1px); }
+.tip .tip-ic { flex: none; width: 34px; height: 34px; border-radius: 10px; display: grid; place-items: center; background: var(--accent-soft); color: var(--accent); }
+.tip b { display: block; font-size: 13.5px; }
+.tip span { font-size: 12.5px; color: var(--text-muted); }
+.essai-layout { display: grid; grid-template-columns: minmax(0, 1fr) 200px; gap: 20px; align-items: start; }
+.essai-head { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; margin-bottom: 10px; }
+.essai-head h2 { font-size: 17px; }
+.essai-pad .pad { height: 230px; }
+.essai-pad .pad-hint { font-size: 14px; }
+.essai-foot { display: flex; justify-content: space-between; align-items: center; gap: 12px; margin-top: 8px; }
+.check-list { display: flex; gap: 8px; flex-wrap: wrap; }
+.check-list span { display: inline-flex; align-items: center; gap: 5px; font-size: 12px; padding: 3px 9px; border-radius: 999px; background: var(--surface); border: 1px solid var(--border); color: var(--text-muted); transition: all var(--t) var(--ease); }
+.check-list span .i { width: 12px; height: 12px; }
+.check-list span.ok { background: var(--success-soft); border-color: #BFE3CD; color: var(--success); }
+.thumbs { display: grid; gap: 10px; }
+.thumbs h3 { font-size: 12.5px; color: var(--text-muted); font-weight: 600; }
+.thumb { display: grid; gap: 4px; padding: 8px; border: 1px solid var(--border); border-radius: var(--radius-sm); background: var(--bg); font-size: 12px; color: var(--text-muted); transition: border-color var(--t) var(--ease), transform var(--t) var(--ease); }
+.thumb.filled { cursor: pointer; }
+.thumb.filled:hover { border-color: var(--accent); transform: translateX(-2px); }
+.thumb.now { border-color: var(--accent); border-style: dashed; color: var(--accent); }
+.thumb .img { height: 54px; display: grid; place-items: center; border-radius: 6px; background: var(--surface); }
+.thumb img { max-height: 48px; max-width: 100%; }
+.thumb .row { display: flex; justify-content: space-between; }
+.enroll-nav { display: flex; gap: 10px; }
+.enroll-wait { display: grid; place-items: center; gap: 12px; padding: 36px 0; color: var(--text-muted); }
+.spinner { width: 34px; height: 34px; border-radius: 50%; border: 3px solid var(--accent-soft); border-top-color: var(--accent); animation: spin .8s linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }
+@media (max-width: 900px) {
+  .stepper li span.lbl { display: none; }
+  .stepper li.current span.lbl { display: block; }
+  .enroll-intro, .essai-layout { grid-template-columns: 1fr; }
+  .thumbs { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .thumbs h3 { grid-column: 1 / -1; }
+  .essai-pad .pad { height: 190px; }
+  .essai-head { flex-direction: column; align-items: flex-start; gap: 2px; }
+  .thumb .row span { display: none; }
+  .thumb .row { justify-content: center; }
+  .enroll-nav { width: 100%; }
+  .enroll-nav .btn { flex: 1; justify-content: center; }
+}
 .enroll-steps { display: flex; gap: 8px; flex-wrap: wrap; margin: 16px 0 4px; font-size: 12.5px; color: var(--text-muted); }
 .enroll-steps span { display: inline-flex; align-items: center; gap: 6px; padding: 4px 10px; border-radius: 999px; background: var(--surface); border: 1px solid var(--border); }
 .enroll-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; margin-top: 16px; }
@@ -669,13 +724,12 @@ label.tranche:hover { border-color: var(--accent); color: var(--accent); }
   <div class="login-card enroll-card hidden" id="enrollCard">
     <div class="logo"><img class="logo-img logo-lg" alt="Fin'Elle – Filiale du Groupe Cofina"></div>
     <h1 style="margin-top:24px">Enregistrez votre signature</h1>
-    <p class="muted" style="margin:4px 0 0">Étape obligatoire avant d'accéder à l'application. <b id="enrollWho" style="color:var(--text)"></b>, tracez votre signature <b style="color:var(--text)">trois fois</b> de la même manière, à la souris, au doigt ou au stylet. Elle sera apposée automatiquement lorsque vous validerez une FED.</p>
-    <div class="enroll-steps"><span>1 · Trois essais</span><span>2 · Contrôle de chaque essai</span><span id="enrollSeuil">3 · Comparaison</span><span>4 · Signature de référence chiffrée</span></div>
-    <div class="enroll-grid" id="enrollGrid"></div>
-    <div class="enroll-result" id="enrollResult"></div>
+    <p class="muted" style="margin:4px 0 0">Étape obligatoire avant d'accéder à l'application, <b id="enrollWho" style="color:var(--text)"></b>. Votre signature sera ensuite apposée automatiquement à chaque validation.</p>
+    <ol class="stepper" id="enrollStepper" aria-label="Étapes de l'enregistrement"></ol>
+    <div class="enroll-body" id="enrollBody"></div>
     <div class="enroll-actions">
       <button type="button" class="link-btn" id="enrollLater">Terminer plus tard (se déconnecter)</button>
-      <button type="button" class="btn btn-primary" id="enrollCheck">Vérifier mes signatures <svg class="i i-arrow"><use href="#ic-arrow"/></svg></button>
+      <div class="enroll-nav"><button type="button" class="btn btn-ghost" id="enrollPrev"></button><button type="button" class="btn btn-primary" id="enrollNext"></button></div>
     </div>
   </div>
 </section>
@@ -1162,68 +1216,124 @@ $('#registerForm').addEventListener('submit', e => {
   toast('Compte créé · enregistrez maintenant votre signature');
 });
 
-/* Étape obligatoire : enregistrement de la signature (trois essais) */
-let enrollUser = null;
+/* Étape obligatoire : enregistrement de la signature, pas à pas
+   Consignes → essai 1 → essai 2 → essai 3 → vérification */
+let enrollUser = null, enroll = null;
+const ENROLL_STEPS = ['Consignes', 'Essai 1', 'Essai 2', 'Essai 3', 'Vérification'];
 function showEnroll(u) {
   enrollUser = u;
-  $('#enrollSeuil').textContent = `3 · Comparaison (seuil ${Math.round(SIG_SEUIL * 100)} %)`;
+  enroll = { step: 0, essais: [null, null, null], result: null };
   $$('#login .login-card').forEach(c => c.classList.toggle('hidden', c.id !== 'enrollCard'));
   $('#app').classList.add('hidden'); $('#login').classList.remove('hidden');
   $('#enrollWho').textContent = u.nom;
-  $('#enrollResult').innerHTML = '';
-  $('#enrollCheck').disabled = false;
-  $('#enrollCheck').innerHTML = `Vérifier mes signatures ${icon('arrow', 'i-arrow')}`;
-  $('#enrollCheck').onclick = enrollVerify;
-  $('#enrollGrid').innerHTML = [1, 2, 3].map(i => `<div class="enroll-essai" id="essai${i}">
-    <h3>Essai ${i} <span class="essai-badge"></span></h3>
-    <div class="pad-wrap"><canvas class="pad" id="padEssai${i}"></canvas><div class="pad-hint">${icon('pen')}&nbsp;Signez ici</div></div>
-    <div class="pad-actions"><span class="essai-status" id="statusEssai${i}">Tracez votre signature.</span><button type="button" class="link-btn" onclick="document.getElementById('padEssai${i}').clear()">Effacer</button></div>
-  </div>`).join('');
-  window.scrollTo(0, 0);
-  [1, 2, 3].forEach(i => {
-    const pad = initPad($('#padEssai' + i));
-    pad.addEventListener('strokeend', () => essaiStatus(i, false));
-    pad.addEventListener('cleared', () => { essaiStatus(i, false); $('#enrollResult').innerHTML = ''; $$('.enroll-essai').forEach(e => e.classList.remove('is-ref')); });
-  });
+  enrollGo(0);
 }
-// Contrôle d'un essai : affiché en direct, et en erreur à la vérification
-function essaiStatus(i, strict) {
-  const pad = $('#padEssai' + i), err = sigCheck(pad.strokes), box = $('#essai' + i), st = $('#statusEssai' + i);
-  const vide = !pad.strokes.length;
-  box.classList.toggle('ok', !err); box.classList.toggle('ko', !!err && (strict || !vide));
-  st.className = 'essai-status ' + (!err ? 'ok' : strict || !vide ? 'ko' : '');
-  st.textContent = !err ? '✓ Essai valide' : vide && !strict ? 'Tracez votre signature.' : err;
-  if (err && strict) pad.classList.add('invalid');
-  return !err;
-}
-async function enrollVerify() {
-  const u = enrollUser;
-  if (![1, 2, 3].map(i => essaiStatus(i, true)).every(Boolean)) { $('#enrollResult').innerHTML = ''; toast('Corrigez les essais signalés'); return; }
-  const essais = [1, 2, 3].map(i => $('#padEssai' + i).strokes);
-  const r = sigCompare(essais);
-  const pct = v => Math.round(v * 100) + ' %';
-  const rows = r.paires.map(p => `<div class="score-row"><span>Essais ${p.i + 1} et ${p.j + 1}</span><div class="score-bar ${p.score < SIG_SEUIL ? 'low' : ''}"><i style="width:${(p.score * 100).toFixed(1)}%"></i><b style="left:${SIG_SEUIL * 100}%"></b></div><b>${pct(p.score)}</b></div>`).join('');
-  const crit = `<p class="hint" style="margin:0">Score calculé après normalisation de la taille et de la position : forme ${pct(r.paires[0].detail.forme)}, tracé ${pct(r.paires[0].detail.trace)}, proportions ${pct(r.paires[0].detail.proportions)}, nombre de traits ${pct(r.paires[0].detail.traits)} (essais 1 et 2).</p>`;
-  if (!r.valide) {
-    audit(`Enregistrement de la signature refusé (score ${pct(r.minimum)} < ${pct(SIG_SEUIL)})`, u.id);
-    $('#enrollResult').innerHTML = `<div class="alert alert-danger">${icon('x')}<div><b>Vos trois signatures ne se ressemblent pas assez</b><p>Le score le plus faible est de ${pct(r.minimum)}, pour un minimum de ${pct(SIG_SEUIL)}. Effacez les essais et signez à nouveau trois fois, de la même manière et à la même taille.</p><button class="btn btn-ghost btn-sm" onclick="[1,2,3].forEach(i => document.getElementById('padEssai' + i).clear())">${icon('pen')} Recommencer</button></div></div>${rows}${crit}`;
+function enrollGo(step) {
+  enroll.step = step;
+  const done = i => i === 0 ? step > 0 : i <= 3 ? !!enroll.essais[i - 1] && step !== i : !!enroll.result?.valide;
+  $('#enrollStepper').innerHTML = ENROLL_STEPS.map((l, i) => `<li class="${i === step ? 'current' : done(i) && i < 4 ? 'done' : ''}" ${done(i) && i < 4 && i !== step && !enroll.result?.valide ? `onclick="enrollGo(${i})" title="Revenir à : ${l}"` : ''}>
+    <span class="dot">${done(i) && i !== step ? icon('check') : i + 1}</span><span class="lbl">${l}</span></li>`).join('');
+  const body = $('#enrollBody'), prev = $('#enrollPrev'), next = $('#enrollNext');
+  body.style.animation = 'none'; void body.offsetWidth; body.style.animation = '';
+  prev.classList.toggle('hidden', step === 0 || step === 4);
+  prev.innerHTML = `${icon('arrow', 'i-back')} Précédent`;
+  prev.onclick = () => enrollGo(step - 1);
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+  if (step === 0) {
+    const tips = [
+      ['pen', 'Signez comme sur papier', 'À la souris, au doigt ou au stylet, en un ou plusieurs gestes.'],
+      ['check', `Au moins ${SIG_MIN_TRAITS} traits`, 'Par exemple votre paraphe et un trait de soulignement.'],
+      ['file', 'Utilisez l\u2019espace', `Tracé d'au moins ${SIG_MIN_LARGEUR} × ${SIG_MIN_HAUTEUR} px : signez en grand.`],
+      ['shield', 'Trois fois la même signature', `Les essais doivent se ressembler à ${Math.round(SIG_SEUIL * 100)} % au moins.`],
+    ];
+    body.innerHTML = `<div class="enroll-intro">${tips.map(([ic, t, d]) => `<div class="tip"><span class="tip-ic">${icon(ic)}</span><div><b>${t}</b><span>${d}</span></div></div>`).join('')}</div>
+      <p class="hint" style="margin:14px 0 0">${icon('lock')} Votre signature de référence sera chiffrée et liée à votre compte. Personne d'autre ne pourra l'utiliser.</p>`;
+    next.disabled = false; next.innerHTML = `Commencer ${icon('arrow', 'i-arrow')}`; next.onclick = () => enrollGo(1);
     return;
   }
-  // Référence : l'essai le plus proche des deux autres
-  const traits = essais[r.reference];
-  $('#essai' + (r.reference + 1)).classList.add('is-ref');
-  $('#essai' + (r.reference + 1)).querySelector('.essai-badge').innerHTML = '<span class="badge b-success">Référence</span>';
-  $('#enrollCheck').disabled = true;
+  if (step <= 3) return enrollEssai(step);
+  enrollVerify();
+}
+// Un essai : grand espace de tracé, contrôle en direct, vignettes des essais déjà faits
+function enrollEssai(n) {
+  const body = $('#enrollBody'), next = $('#enrollNext');
+  const thumb = i => { const e = enroll.essais[i - 1];
+    return `<div class="thumb ${e ? 'filled' : ''} ${i === n ? 'now' : ''}" ${e && i !== n ? `onclick="enrollGo(${i})" title="Refaire l'essai ${i}"` : ''}>
+      <div class="row"><b>Essai ${i}</b><span>${i === n ? 'en cours' : e ? 'Refaire' : 'à venir'}</span></div>
+      <div class="img">${e && i !== n ? `<img src="${sigPng(e)}" alt="Essai ${i}">` : i === n ? icon('pen') : ''}</div></div>`; };
+  body.innerHTML = `<div class="essai-layout">
+    <div class="essai-pad">
+      <div class="essai-head"><h2>Essai ${n} sur 3</h2><span class="muted" style="font-size:12.5px">${n === 1 ? 'Signez naturellement, en grand.' : 'Signez de la même manière que l\u2019essai 1.'}</span></div>
+      <div class="pad-wrap"><canvas class="pad" id="padEssai"></canvas><div class="pad-hint">${icon('pen')}&nbsp;Signez ici</div></div>
+      <div class="essai-foot">
+        <div class="check-list" id="essaiChecks"></div>
+        <button type="button" class="btn btn-ghost btn-sm" onclick="document.getElementById('padEssai').clear()">${icon('x')} Effacer</button>
+      </div>
+      <div class="field-error" id="essaiErr" style="margin-top:6px"></div>
+    </div>
+    <div class="thumbs"><h3>Vos essais</h3>${[1, 2, 3].map(thumb).join('')}</div>
+  </div>`;
+  const pad = initPad($('#padEssai'));
+  // Revenir sur un essai déjà fait : le tracé est réaffiché
+  const old = enroll.essais[n - 1];
+  if (old) {
+    const ctx = pad.getContext('2d');
+    old.forEach(st => { ctx.beginPath(); st.forEach((p, i) => i ? ctx.lineTo(p.x, p.y) : ctx.moveTo(p.x, p.y)); ctx.stroke(); });
+    pad.strokes = old.map(st => st.slice()); pad.isEmpty = false; pad.classList.add('signed');
+  }
+  const refresh = () => {
+    const t = sigTraits(pad.strokes), b = t.length ? sigBox(t) : { w: 0, h: 0 };
+    const crit = [[t.length > 0, 'Tracé'], [t.length >= SIG_MIN_TRAITS, `${SIG_MIN_TRAITS} traits ou plus`], [b.w >= SIG_MIN_LARGEUR && b.h >= SIG_MIN_HAUTEUR, 'Taille suffisante']];
+    $('#essaiChecks').innerHTML = crit.map(([ok, l]) => `<span class="${ok ? 'ok' : ''}">${icon(ok ? 'check' : 'x')} ${l}</span>`).join('');
+    const ok = !sigCheck(pad.strokes);
+    next.disabled = !ok;
+    if (ok) $('#essaiErr').textContent = '';
+    return ok;
+  };
+  pad.addEventListener('strokeend', refresh);
+  pad.addEventListener('cleared', refresh);
+  refresh();
+  next.innerHTML = n < 3 ? `Valider l'essai ${n} ${icon('arrow', 'i-arrow')}` : `Vérifier mes signatures ${icon('arrow', 'i-arrow')}`;
+  next.onclick = () => {
+    const err = sigCheck(pad.strokes);
+    if (err) { $('#essaiErr').textContent = err; pad.classList.add('invalid'); return; }
+    enroll.essais[n - 1] = pad.strokes.map(st => st.slice());
+    enroll.result = null;
+    // Prochaine étape : le premier essai manquant, sinon la vérification
+    const manquant = enroll.essais.findIndex(e => !e);
+    enrollGo(manquant === -1 ? 4 : manquant + 1);
+  };
+}
+async function enrollVerify() {
+  const u = enrollUser, body = $('#enrollBody'), next = $('#enrollNext');
+  next.disabled = true; next.innerHTML = `Vérification… ${icon('clock')}`;
+  body.innerHTML = `<div class="enroll-wait"><div class="spinner"></div><span>Comparaison de vos trois essais…</span></div>`;
+  await new Promise(res => setTimeout(res, 600));
+  const r = enroll.result = sigCompare(enroll.essais);
+  const pct = v => Math.round(v * 100) + ' %';
+  const rows = r.paires.map(p => `<div class="score-row"><span>Essais ${p.i + 1} et ${p.j + 1}</span><div class="score-bar ${p.score < SIG_SEUIL ? 'low' : ''}"><i style="width:${(p.score * 100).toFixed(1)}%"></i><b style="left:${SIG_SEUIL * 100}%"></b></div><b>${pct(p.score)}</b></div>`).join('');
+  const thumbs = `<div class="thumbs" style="grid-template-columns:repeat(3,minmax(0,1fr))">${enroll.essais.map((e, i) => `<div class="thumb ${i === r.reference && r.valide ? 'now' : ''}"><div class="row"><b>Essai ${i + 1}</b><span>${i === r.reference && r.valide ? 'Référence' : ''}</span></div><div class="img"><img src="${sigPng(e)}" alt="Essai ${i + 1}"></div></div>`).join('')}</div>`;
+  if (!r.valide) {
+    audit(`Enregistrement de la signature refusé (score ${pct(r.minimum)} < ${pct(SIG_SEUIL)})`, u.id);
+    $('#enrollStepper li:last-child')?.classList.add('current');
+    body.innerHTML = `<div class="enroll-result"><div class="alert alert-danger">${icon('x')}<div><b>Vos trois signatures ne se ressemblent pas assez</b><p>Le score le plus faible est de ${pct(r.minimum)}, pour un minimum de ${pct(SIG_SEUIL)}. Recommencez en signant les trois fois de la même manière et à la même taille.</p></div></div>${thumbs}${rows}</div>`;
+    next.disabled = false; next.innerHTML = `${icon('pen')} Recommencer`;
+    next.onclick = () => { enroll.essais = [null, null, null]; enroll.result = null; enrollGo(1); };
+    $('#enrollPrev').classList.add('hidden');
+    return;
+  }
+  const traits = enroll.essais[r.reference];
   const png = sigPng(traits);
   if (sigKey) u.sigRef = await sigEncrypt(u.id, { png, traits, source: 'enrôlement', score: r.minimum, essai: r.reference + 1 });
   delete u.sigSeed;
   loadMySig(u.id);
   audit(`Signature de référence enregistrée (essai ${r.reference + 1}, score ${pct(r.minimum)}, chiffrée AES-256-GCM)`, u.id);
-  $('#enrollResult').innerHTML = `<div class="alert alert-success">${icon('check')}<div><b>Signature validée et enregistrée</b><p>Les trois essais dépassent le seuil de ${pct(SIG_SEUIL)} (score le plus faible : ${pct(r.minimum)}). L'essai ${r.reference + 1}, le plus représentatif, est retenu comme référence.</p></div></div>${rows}${crit}
-    <div class="ref-preview"><div class="sign-box"><img src="${png}" alt="Signature de référence"></div><div class="ref-meta"><b>${icon('lock')} Signature de référence (essai ${r.reference + 1})</b><span>Stockée chiffrée (AES-256-GCM) et liée à votre identifiant</span><span>Image PNG transparente + ${traits.length} traits vectoriels</span><span>Empreinte <code>${u.sigRef ? u.sigRef.empreinte.slice(0, 16) + '…' : '—'}</code></span></div></div>`;
-  $('#enrollCheck').disabled = false;
-  $('#enrollCheck').innerHTML = `Accéder à l'application ${icon('arrow', 'i-arrow')}`;
-  $('#enrollCheck').onclick = () => enterApp(u);
+  $('#enrollStepper').innerHTML = ENROLL_STEPS.map(l => `<li class="done"><span class="dot">${icon('check')}</span><span class="lbl">${l}</span></li>`).join('');
+  body.innerHTML = `<div class="enroll-result"><div class="alert alert-success">${icon('check')}<div><b>Signature validée et enregistrée</b><p>Vos trois essais se ressemblent à ${pct(r.minimum)} au moins (seuil ${pct(SIG_SEUIL)}). L'essai ${r.reference + 1}, le plus représentatif, devient votre signature de référence.</p></div></div>
+    <div class="ref-preview"><div class="sign-box"><img src="${png}" alt="Signature de référence"></div><div class="ref-meta"><b>${icon('lock')} Signature de référence (essai ${r.reference + 1})</b><span>Stockée chiffrée (AES-256-GCM) et liée à votre identifiant</span><span>Image PNG transparente + ${traits.length} traits vectoriels</span><span>Empreinte <code>${u.sigRef ? u.sigRef.empreinte.slice(0, 16) + '…' : '—'}</code></span></div></div>
+    ${rows}</div>`;
+  next.disabled = false; next.innerHTML = `Accéder à l'application ${icon('arrow', 'i-arrow')}`;
+  next.onclick = () => enterApp(u);
 }
 $('#enrollLater').addEventListener('click', () => {
   audit('Enregistrement de la signature reporté · déconnexion', enrollUser?.id);
