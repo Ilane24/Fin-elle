@@ -597,6 +597,7 @@ label.tranche:hover { border-color: var(--accent); color: var(--accent); }
 @keyframes stamp { from { opacity: 0; transform: scale(1.15); } to { opacity: 1; transform: none; } }
 .n1-actions { display: flex; gap: 10px; justify-content: flex-end; flex-wrap: wrap; }
 .n1-slot { border-style: dashed; border-color: var(--accent); color: var(--text-muted); }
+.sig-slot.missing { border-color: var(--danger); color: var(--danger); }
 @media (max-width: 900px) { .enroll-grid { grid-template-columns: 1fr; } .score-row { grid-template-columns: 90px 1fr 46px; } }
 </style>
 </head>
@@ -784,6 +785,8 @@ const MENUE_CODE = 'Version 01';
 const MENUE_ROLES = { raf: 'le RAF/HF', dc: 'la Direction Centrale', dg: 'la Direction Générale', compta: 'la Comptabilité' };
 // Cases « Montant Achat » du formulaire papier, dans l'ordre et avec les libellés d'origine.
 const TRANCHES = ['< 50 000', '> 50 000', '> 100 000', '> 1 500 000', '< 1 500 000'];
+// Tranche proposée d'après le montant estimé de la FED
+const trancheOf = m => m < 50000 ? 0 : m <= 100000 ? 1 : m <= 1500000 ? 2 : 3;
 
 const STATUS = {
   brouillon: ['Brouillon', 'b-neutral'],
@@ -1214,6 +1217,7 @@ async function enrollVerify() {
   const png = sigPng(traits);
   if (sigKey) u.sigRef = await sigEncrypt(u.id, { png, traits, source: 'enrôlement', score: r.minimum, essai: r.reference + 1 });
   delete u.sigSeed;
+  loadMySig(u.id);
   audit(`Signature de référence enregistrée (essai ${r.reference + 1}, score ${pct(r.minimum)}, chiffrée AES-256-GCM)`, u.id);
   $('#enrollResult').innerHTML = `<div class="alert alert-success">${icon('check')}<div><b>Signature validée et enregistrée</b><p>Les trois essais dépassent le seuil de ${pct(SIG_SEUIL)} (score le plus faible : ${pct(r.minimum)}). L'essai ${r.reference + 1}, le plus représentatif, est retenu comme référence.</p></div></div>${rows}${crit}
     <div class="ref-preview"><div class="sign-box"><img src="${png}" alt="Signature de référence"></div><div class="ref-meta"><b>${icon('lock')} Signature de référence (essai ${r.reference + 1})</b><span>Stockée chiffrée (AES-256-GCM) et liée à votre identifiant</span><span>Image PNG transparente + ${traits.length} traits vectoriels</span><span>Empreinte <code>${u.sigRef ? u.sigRef.empreinte.slice(0, 16) + '…' : '—'}</code></span></div></div>`;
@@ -1245,6 +1249,7 @@ function startSession(u) {
   $('#meRole').textContent = `${ROLES[u.role].label} · ${u.service}`;
   $('#meAvatar').textContent = initials(u.nom);
   $('#profileSwitch').value = u.id;
+  loadMySig(u.id);
 }
 
 $('#loginForm').addEventListener('submit', e => {
@@ -1529,6 +1534,11 @@ async function sigDecrypt(userId, rec) {
 USERS.forEach(u => { u.sigSeed = true; });
 const seedRefs = sigKey ? Promise.all(USERS.map(async u => { u.sigRef = await sigEncrypt(u.id, { png: sigFromName(u.id), traits: null, source: 'démo' }); })) : Promise.resolve();
 const hasSig = u => !!(u?.sigRef || u?.sigSeed);
+let mySig = null;
+function loadMySig(id) {
+  mySig = null;
+  return refSignature(id).then(r => { if (session?.id === id) { mySig = r?.png || null; $$('.sig-slot').forEach(slotRefresh); } });
+}
 async function refSignature(id) {
   await seedRefs;
   const u = userById(id);
@@ -1537,7 +1547,18 @@ async function refSignature(id) {
 }
 
 /* Pad de signature (souris, stylet ou doigt) */
+function slotRefresh(el) {
+  el.classList.toggle('missing', !mySig);
+  el.innerHTML = mySig ? `${icon('pen')}&nbsp;Votre signature enregistrée sera apposée ici`
+    : `${icon('x')}&nbsp;Aucune signature enregistrée : <button type="button" class="link-btn" onclick="showEnroll(userById(session.id))">l'enregistrer</button>`;
+}
 function initPad(canvas) {
+  if (canvas.tagName !== 'CANVAS') {
+    Object.defineProperty(canvas, 'isEmpty', { get: () => !mySig, configurable: true });
+    canvas.toDataURL = () => mySig; canvas.clear = () => {}; canvas.strokes = [];
+    slotRefresh(canvas);
+    return canvas;
+  }
   const ratio = window.devicePixelRatio || 1;
   const r = canvas.getBoundingClientRect();
   canvas.width = r.width * ratio; canvas.height = r.height * ratio;
@@ -1560,9 +1581,8 @@ function initPad(canvas) {
   canvas.clear = () => { ctx.clearRect(0, 0, canvas.width, canvas.height); canvas.isEmpty = true; canvas.strokes = []; canvas.classList.remove('signed'); canvas.dispatchEvent(new Event('cleared')); };
   return canvas;
 }
-const padHtml = (id, hint) => `
-  <div class="pad-wrap"><canvas class="pad" id="${id}"></canvas><div class="pad-hint">${icon('pen')}&nbsp;${hint}</div></div>
-  <div class="pad-actions"><span class="muted">Signez avec la souris ou le doigt.</span><button type="button" class="link-btn" onclick="document.getElementById('${id}').clear()">Effacer</button></div>`;
+// Tous les niveaux signent en un clic : la signature enregistrée à la création du compte est apposée
+const padHtml = id => `<div class="sign-box n1-slot sig-slot" id="${id}">${icon('pen')}&nbsp;Votre signature enregistrée sera apposée ici</div>`;
 
 /* =========================================================
    Signature électronique : chaque niveau signe son propre formulaire.
@@ -1650,12 +1670,8 @@ function lockLine(d, level) {
   const ok = verify(d, level), v = versionOf(d, level);
   return `<div class="lock-line ${ok ? '' : 'bad'}" title="Empreinte SHA-256 : ${sig.hash}">${icon('lock')}<span>Signé électroniquement et verrouillé${v > 1 ? ` · version ${v}` : ''} · empreinte <code>${sig.hash.slice(0, 8)}…${sig.hash.slice(-4)}</code> · ${ok ? 'intégrité vérifiée' : 'modifié après signature !'}</span></div>`;
 }
-const certifyHtml = id => `<label class="certify"><input type="checkbox" id="${id}"><span>Je certifie l'exactitude des informations de ce formulaire et je le signe électroniquement. Une fois signé, il est verrouillé et ne peut plus être modifié.</span></label><div class="field-error" id="${id}Err"></div>`;
-function checkCertify(id) {
-  const ok = !!$('#' + id)?.checked;
-  $('#' + id + 'Err').textContent = ok ? '' : 'Cochez la case pour signer électroniquement.';
-  return ok;
-}
+const certifyHtml = () => `<p class="hint" style="margin:0">${icon('lock')} En validant, vous certifiez l'exactitude de ce formulaire : votre signature enregistrée est apposée automatiquement et le formulaire est verrouillé.</p>`;
+const checkCertify = () => true;
 
 function signatureBlock(sig, waitingFor, d, level) {
   if (sig) return `<div class="sign-box"><img ${sig.auto ? 'class="apposee" title="Signature enregistrée, apposée automatiquement"' : ''} src="${sig.img || sigFromName(sig.by)}" alt="Signature de ${esc(nom(sig.by))}"></div>
@@ -1667,10 +1683,19 @@ function signatureBlock(sig, waitingFor, d, level) {
 function n1FormHtml(d) {
   return `<div class="level-form" id="n1Form">
     <div class="sign-box n1-slot">${icon('pen')}&nbsp;Votre signature enregistrée sera apposée ici</div>
-    <textarea class="input" id="n1Com" rows="2" placeholder="Commentaire (facultatif ; obligatoire pour rejeter, visible par ${esc(nom(d.demandeur))})"></textarea><div class="field-error" id="eN1Com"></div>
-    <p class="hint" style="margin:0">${icon('lock')} En cliquant sur « Valider », votre signature enregistrée est apposée automatiquement et la FED est verrouillée.</p>
-    <div class="n1-actions"><button class="btn btn-ghost" id="n1Rejeter" onclick="submitN1('${d.ref}', false)">${icon('x')} Rejeter</button><button class="btn btn-success" id="n1Valider" onclick="submitN1('${d.ref}', true)">${icon('check')} Valider</button></div>
+    <p class="hint" style="margin:0">${icon('lock')} Toutes les informations de la FED sont reprises automatiquement et en lecture seule. Validez pour apposer votre signature, ou rejetez avec un motif.</p>
+    <div class="n1-actions"><button class="btn btn-ghost" id="n1Rejeter" onclick="openRejetN1('${d.ref}')">${icon('x')} Rejeter</button><button class="btn btn-success" id="n1Valider" onclick="submitN1('${d.ref}', true)">${icon('check')} Valider</button></div>
   </div>`;
+}
+// Rejet par le N+1 : seul le motif est demandé
+function openRejetN1(ref) {
+  const d = DEMANDES.find(x => x.ref === ref);
+  openModal(`
+    <div class="modal-head"><h2>Rejeter la FED</h2><button class="icon-btn" onclick="closeModal()" aria-label="Fermer">${icon('x')}</button></div>
+    <p class="muted" style="margin:0">${d.ref} · ${esc(d.objet)} · Demandeur : <b style="color:var(--text)">${esc(nom(d.demandeur))}</b></p>
+    <div class="field"><label for="n1Com">Motif du rejet *</label><textarea class="input" id="n1Com" rows="4" placeholder="Ex. Le montant estimé ne correspond pas à la pro-forma jointe."></textarea><div class="field-error" id="eN1Com"></div></div>
+    <div class="modal-actions"><button class="btn btn-ghost" onclick="closeModal()">Annuler</button><button class="btn btn-danger" onclick="submitN1('${ref}', false)">${icon('x')} Rejeter et notifier</button></div>`,
+    () => $('#n1Com').focus());
 }
 
 /* La fiche, au format du formulaire papier 05SUP02V03 */
@@ -1728,16 +1753,19 @@ function cfoSection(d) {
     </div>
     <div class="fiche-signs single"><div class="fiche-sign"><h3>Signature</h3>${signatureBlock(d.sigCfo, '', d, 'cfo')}</div></div>`;
   }
-  const options = d.raf.proformas.map((p, i) => p.fournisseur && p.montant ? `<option value="${i}" data-montant="${p.montant}">${esc(pfLabel(i))} – ${fcfa(p.montant)}</option>` : '').join('');
+  const valides = d.raf.proformas.map((p, i) => ({ ...p, i })).filter(p => p.fournisseur && p.montant);
+  const moinsDisant = valides.length ? valides.reduce((a, b) => b.montant < a.montant ? b : a) : null;
+  const options = valides.map(p => `<option value="${p.i}" data-montant="${p.montant}" ${p === moinsDisant ? 'selected' : ''}>${esc(pfLabel(p.i))} – ${fcfa(p.montant)}</option>`).join('');
   return `${head}<div class="fiche-grid" id="cfoForm">${ident}
       <div class="fiche-cell full"><label for="cfoPf">Proforma retenue *</label>
         <select class="input" id="cfoPf" onchange="cfoPickProforma(this)"><option value="">Choisir parmi les proformas du RAF/HF…</option>${options}</select>
+        ${moinsDisant ? `<p class="hint" style="margin:4px 0 0">${icon('file')} Repris automatiquement : proforma la moins-disante du RAF/HF, montant en chiffres et en lettres. Modifiable.</p>` : ''}
         <div class="field-error" id="eCfoPf"></div></div>
       <div class="fiche-cell full"><label for="cfoMontant">Montant en chiffre (FCFA) *</label>
-        <input class="input" id="cfoMontant" inputmode="numeric" placeholder="0" oninput="this.value=this.value.replace(/[^0-9]/g,'').replace(/\\B(?=(\\d{3})+(?!\\d))/g,' ');cfoMontantChange()">
+        <input class="input" id="cfoMontant" inputmode="numeric" placeholder="0" value="${moinsDisant ? fmtNum(moinsDisant.montant) : ''}" oninput="this.value=this.value.replace(/[^0-9]/g,'').replace(/\\B(?=(\\d{3})+(?!\\d))/g,' ');cfoMontantChange()">
         <div class="field-error" id="eCfoM"></div></div>
       <div class="fiche-cell full"><label for="cfoLettres">Montant en lettre *</label>
-        <textarea class="input" id="cfoLettres" rows="2" placeholder="Rempli automatiquement à partir du montant en chiffre"></textarea>
+        <textarea class="input" id="cfoLettres" rows="2" placeholder="Rempli automatiquement à partir du montant en chiffre">${moinsDisant ? esc(enLettres(moinsDisant.montant)) : ''}</textarea>
         <div class="field-error" id="eCfoL"></div></div>
       <div class="fiche-cell full"><label for="cfoReserve">Réserve</label><textarea class="input" id="cfoReserve" rows="2" placeholder="Observations éventuelles (facultatif)"></textarea></div>
       <div class="fiche-cell full"><span>Date</span><b>${fDate(new Date())}</b></div>
@@ -1770,16 +1798,20 @@ function rafSection(d) {
     </div>
     <div class="fiche-signs single"><div class="fiche-sign"><h3>Signature</h3>${signatureBlock(d.sigRaf, '', d, 'raf')}</div></div>`;
   }
+  // Reprise automatique de la FED : tranche d'après le montant estimé, proforma 1 d'après la pièce jointe et le montant
+  const pre = d.raf || { tranche: trancheOf(d.montant), reserve: '', proformas: [
+    { fournisseur: '', ref: d.pieces?.[0] ? d.pieces[0].replace(/\.pdf$/i, '') : '', montant: d.montant }, { fournisseur: '', ref: '', montant: 0 }, { fournisseur: '', ref: '', montant: 0 }] };
   return `${head}<div class="fiche-grid" id="rafForm">${ident}
+      ${d.raf ? '' : `<div class="fiche-cell full"><p class="hint" style="margin:0">${icon('file')} Pré-rempli automatiquement à partir de la FED (montant estimé ${fcfa(d.montant)}${d.pieces?.length ? ', pro-forma jointe' : ''}). Vérifiez et complétez.</p></div>`}
       <div class="fiche-cell full"><span>Montant achat *</span>
-        <div class="tranches">${TRANCHES.map((l, i) => `<label class="tranche"><input type="radio" name="tranche" value="${i}" ${d.raf?.tranche === i ? 'checked' : ''}>${l}</label>`).join('')}</div>
+        <div class="tranches">${TRANCHES.map((l, i) => `<label class="tranche"><input type="radio" name="tranche" value="${i}" ${pre.tranche === i ? 'checked' : ''}>${l}</label>`).join('')}</div>
         <div class="field-error" id="eTranche"></div></div>
       ${[0, 1, 2].map(i => `<div class="fiche-cell full"><div class="pf-row">
-        <div><label for="pfF${i}">Proforma ${i + 1}${i === 0 ? ' *' : ''}</label><input class="input" id="pfF${i}" placeholder="Fournisseur" value="${esc(d.raf?.proformas[i].fournisseur)}"></div>
-        <div><label for="pfR${i}">Réf N°</label><input class="input" id="pfR${i}" placeholder="Ex. PF-2026-001" value="${esc(d.raf?.proformas[i].ref)}"></div>
-        <div><label for="pfM${i}">Montant (FCFA)</label><input class="input" id="pfM${i}" inputmode="numeric" placeholder="0" value="${d.raf?.proformas[i].montant ? fmtNum(d.raf.proformas[i].montant) : ''}" oninput="this.value=this.value.replace(/[^0-9]/g,'').replace(/\\B(?=(\\d{3})+(?!\\d))/g,' ')"></div>
+        <div><label for="pfF${i}">Proforma ${i + 1}${i === 0 ? ' *' : ''}</label><input class="input" id="pfF${i}" placeholder="Fournisseur" value="${esc(pre.proformas[i].fournisseur)}"></div>
+        <div><label for="pfR${i}">Réf N°</label><input class="input" id="pfR${i}" placeholder="Ex. PF-2026-001" value="${esc(pre.proformas[i].ref)}"></div>
+        <div><label for="pfM${i}">Montant (FCFA)</label><input class="input" id="pfM${i}" inputmode="numeric" placeholder="0" value="${pre.proformas[i].montant ? fmtNum(pre.proformas[i].montant) : ''}" oninput="this.value=this.value.replace(/[^0-9]/g,'').replace(/\\B(?=(\\d{3})+(?!\\d))/g,' ')"></div>
       </div>${i === 0 ? '<div class="field-error" id="ePf"></div>' : ''}</div>`).join('')}
-      <div class="fiche-cell full"><label for="rafReserve">Réserve</label><textarea class="input" id="rafReserve" rows="2" placeholder="Observations éventuelles (facultatif)">${esc(d.raf?.reserve)}</textarea></div>
+      <div class="fiche-cell full"><label for="rafReserve">Réserve</label><textarea class="input" id="rafReserve" rows="2" placeholder="Observations éventuelles (facultatif)">${esc(pre.reserve)}</textarea></div>
       <div class="fiche-cell full"><span>Date</span><b>${fDate(new Date())}</b></div>
     </div>
     <div class="fiche-signs single"><div class="fiche-sign"><h3>Signature *</h3>${padHtml('padRaf', 'Signez ici pour valider')}<div class="field-error" id="eSigR"></div>${certifyHtml('rafCert')}
@@ -1942,7 +1974,7 @@ function viewDemande(ref) {
   else if (isRaf) banner = `<div class="alert alert-warning">${icon('inbox')}<div><b>Cette demande attend votre validation</b><p>Les parties Demandeur et Manager sont en lecture seule. Complétez votre partie en bas de la fiche et signez, ou retournez-la au N+1 si elle est mal remplie.</p></div></div>`;
   else if (d.statut === 'raf') banner = `<div class="alert alert-warning">${icon('clock')}<div><b>Validée par ${esc(nom(d.n1))} (N+1)</b><p>En attente de la validation de ${esc(nom(RAF_ID))} (RAF/HF).</p></div></div>`;
   else if (isN1 && d.retourRaf) banner = `<div class="alert alert-danger">${icon('message')}<div><b>Retournée par ${esc(nom(d.retourRaf.by))} (RAF/HF) le ${fDate(d.retourRaf.at)} à ${fTime(d.retourRaf.at)}</b><p>« ${esc(d.retourRaf.comment)} »</p><p class="muted" style="font-size:12.5px">Validez à nouveau si la fiche est correcte, ou rejetez-la vers ${esc(nom(d.demandeur))} pour correction.</p></div></div>`;
-  else if (isN1) banner = `<div class="alert alert-warning">${icon('inbox')}<div><b>Cette demande attend votre décision</b><p>Dans la case « Signature Manager », cliquez sur « Valider » : votre signature enregistrée y est apposée automatiquement. Pour rejeter, saisissez un commentaire, il sera transmis à ${esc(nom(d.demandeur))}.</p></div></div>`;
+  else if (isN1) banner = `<div class="alert alert-warning">${icon('inbox')}<div><b>Cette demande attend votre décision</b><p>Toutes les informations de la FED sont reprises en lecture seule. Cliquez sur « Valider » : votre signature enregistrée est apposée automatiquement dans la case « Signature Manager ». Ou cliquez sur « Rejeter » et indiquez le motif, transmis à ${esc(nom(d.demandeur))}.</p></div></div>`;
   else if (d.statut === 'attente' && d.retourRaf) banner = `<div class="alert alert-warning">${icon('clock')}<div><b>Retournée au N+1 par le RAF/HF</b><p>« ${esc(d.retourRaf.comment)} »</p></div></div>`;
   else if (d.statut === 'attente') banner = `<div class="alert alert-warning">${icon('clock')}<div><b>En attente de validation</b><p>Transmise à ${esc(nom(d.n1))} (N+1) le ${fDate(d.date)} à ${fTime(d.date)}.</p></div></div>`;
   // Circuit complet : FED (N+1, RAF/HF, CFO), puis fiche de menues dépenses pour une menue dépense
@@ -2064,7 +2096,7 @@ function viewNouvelle(ref) {
     </div>
     <div class="form-actions">
       <a class="btn btn-ghost" href="#/demandes">Annuler</a>
-      <button class="btn btn-primary" onclick="submitFiche('${src ? src.ref : ''}')" ${manager ? '' : 'disabled style="opacity:.5;pointer-events:none"'}>${icon('pen')} Signer et transmettre au N+1 ${icon('arrow', 'i-arrow')}</button>
+      <button class="btn btn-primary" onclick="submitFiche('${src ? src.ref : ''}')" ${manager ? '' : 'disabled style="opacity:.5;pointer-events:none"'}>${icon('check')} Valider et transmettre au N+1 ${icon('arrow', 'i-arrow')}</button>
     </div>`;
 }
 
@@ -2113,7 +2145,7 @@ function ficheMenueView(d) {
       <div class="fiche-grid" id="comptaForm2">
         <div class="fiche-cell"><label for="cRef">Référence de la demande N° *</label><input class="input" id="cRef" value="${nextOrdre}"><div class="field-error"></div></div>
         <div class="fiche-cell"><label for="cImput">Imputation budgétaire *</label><input class="input" id="cImput" placeholder="Ex. 6155 – Entretien et réparations"><div class="field-error"></div></div>
-        <div class="fiche-cell full"><label for="cDesig">Désignation du type d'opération / Libellé *</label><input class="input" id="cDesig" placeholder="Ex. Achat de carburant – groupe électrogène"><div class="field-error"></div></div>
+        <div class="fiche-cell full"><label for="cDesig">Désignation du type d'opération / Libellé *</label><input class="input" id="cDesig" value="${esc(d.objet)}" placeholder="Ex. Achat de carburant – groupe électrogène"><div class="field-error"></div></div>
         <div class="fiche-cell full"><span>Pièce(s) justificative(s) *</span>
           <div class="pieces-list" id="cPieces"></div>
           <div class="upload" style="padding:12px" onclick="addJustif('${d.ref}')">${icon('upload')}<div><b>Ajouter une facture ou un reçu</b> · PDF, JPG, PNG</div></div>
@@ -2629,10 +2661,11 @@ async function submitN1(ref, valider) {
   const d = DEMANDES.find(x => x.ref === ref);
   if (!n1Habilite(d)) { audit('Signature N+1 refusée (autre département)', ref); toast('Vous n\'appartenez pas au département du demandeur : vous ne pouvez pas signer cette FED.'); return; }
   if (d.statut !== 'attente' || d.n1 !== session.id) return;
-  const com = $('#n1Com').value.trim();
+  const com = valider ? '' : $('#n1Com').value.trim();
   const now = nowIso();
   if (!valider) {
     if (com.length < 10) { $('#eN1Com').textContent = 'Le motif du rejet est obligatoire (10 caractères minimum).'; $('#n1Com').classList.add('invalid'); $('#n1Com').focus(); return; }
+    closeModal();
     Object.assign(d, { statut: 'rejetee', commentaire: com, retourRaf: null, rejetPar: session.id, rejetEtape: 'attente' });
     d.historique.push({ at: now, by: session.id, action: 'Demande rejetée par le N+1', note: com });
     notify(d.demandeur, ref, `Votre demande a été rejetée par ${session.name} : « ${com.length > 70 ? com.slice(0, 70) + '…' : com} »`);
