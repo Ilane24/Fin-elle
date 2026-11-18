@@ -566,6 +566,38 @@ label.tranche:hover { border-color: var(--accent); color: var(--accent); }
   .fiche-cell, .fiche-sign { padding-left: 16px; padding-right: 16px; }
   .profile-switch > span { display: none; }
 }
+
+/* Enregistrement de la signature de référence */
+.enroll-card { max-width: 920px; }
+.enroll-steps { display: flex; gap: 8px; flex-wrap: wrap; margin: 16px 0 4px; font-size: 12.5px; color: var(--text-muted); }
+.enroll-steps span { display: inline-flex; align-items: center; gap: 6px; padding: 4px 10px; border-radius: 999px; background: var(--surface); border: 1px solid var(--border); }
+.enroll-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; margin-top: 16px; }
+.enroll-essai { display: grid; gap: 8px; align-content: start; min-width: 0; padding: 12px; border: 1px solid var(--border); border-radius: var(--radius); background: var(--surface); transition: border-color var(--t) var(--ease), box-shadow var(--t) var(--ease); }
+.enroll-essai:hover { border-color: #D7DAE0; box-shadow: var(--shadow-sm); }
+.enroll-essai.ok { border-color: #BFE3CD; }
+.enroll-essai.ko { border-color: #F5C2C2; }
+.enroll-essai.is-ref { border-color: var(--success); box-shadow: 0 0 0 3px var(--success-soft); }
+.enroll-essai h3 { font-size: 13px; display: flex; justify-content: space-between; align-items: center; }
+.enroll-essai .pad { height: 150px; }
+.essai-status { font-size: 12px; min-height: 18px; color: var(--text-muted); }
+.essai-status.ok { color: var(--success); }
+.essai-status.ko { color: var(--danger); }
+.enroll-result { margin-top: 16px; display: grid; gap: 12px; }
+.score-row { display: grid; grid-template-columns: 110px 1fr 52px; gap: 10px; align-items: center; font-size: 12.5px; }
+.score-bar { height: 8px; border-radius: 999px; background: var(--surface); border: 1px solid var(--border); overflow: hidden; position: relative; }
+.score-bar i { position: absolute; inset: 0 auto 0 0; border-radius: 999px; background: var(--success); animation: grow .6s var(--ease) both; transform-origin: left; }
+.score-bar.low i { background: var(--danger); }
+.score-bar b { position: absolute; top: -3px; bottom: -3px; width: 2px; background: var(--text); opacity: .5; }
+.enroll-actions { display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; margin-top: 16px; }
+.ref-preview { display: flex; gap: 16px; align-items: center; flex-wrap: wrap; }
+.ref-meta { display: grid; gap: 4px; font-size: 12.5px; color: var(--text-muted); }
+.ref-meta b { color: var(--text); display: inline-flex; gap: 6px; align-items: center; }
+.ref-preview .sign-box { width: 260px; height: 110px; background: repeating-conic-gradient(#F4F5F7 0% 25%, #fff 0% 50%) 50% / 16px 16px; }
+.sign-box img.apposee { animation: stamp .5s var(--ease) both; }
+@keyframes stamp { from { opacity: 0; transform: scale(1.15); } to { opacity: 1; transform: none; } }
+.n1-actions { display: flex; gap: 10px; justify-content: flex-end; flex-wrap: wrap; }
+.n1-slot { border-style: dashed; border-color: var(--accent); color: var(--text-muted); }
+@media (max-width: 900px) { .enroll-grid { grid-template-columns: 1fr; } .score-row { grid-template-columns: 90px 1fr 46px; } }
 </style>
 </head>
 <body>
@@ -631,6 +663,19 @@ label.tranche:hover { border-color: var(--accent); color: var(--accent); }
       <button class="btn btn-primary" type="submit" style="justify-content:center">Créer mon compte <svg class="i i-arrow"><use href="#ic-arrow"/></svg></button>
     </form>
     <p class="login-switch">Déjà inscrit(e) ? <button type="button" class="link-btn" id="toLogin">Se connecter</button></p>
+  </div>
+
+  <div class="login-card enroll-card hidden" id="enrollCard">
+    <div class="logo"><img class="logo-img logo-lg" alt="Fin'Elle – Filiale du Groupe Cofina"></div>
+    <h1 style="margin-top:24px">Enregistrez votre signature</h1>
+    <p class="muted" style="margin:4px 0 0">Étape obligatoire avant d'accéder à l'application. <b id="enrollWho" style="color:var(--text)"></b>, tracez votre signature <b style="color:var(--text)">trois fois</b> de la même manière, à la souris, au doigt ou au stylet. Elle sera apposée automatiquement lorsque vous validerez une FED.</p>
+    <div class="enroll-steps"><span>1 · Trois essais</span><span>2 · Contrôle de chaque essai</span><span id="enrollSeuil">3 · Comparaison</span><span>4 · Signature de référence chiffrée</span></div>
+    <div class="enroll-grid" id="enrollGrid"></div>
+    <div class="enroll-result" id="enrollResult"></div>
+    <div class="enroll-actions">
+      <button type="button" class="link-btn" id="enrollLater">Terminer plus tard (se déconnecter)</button>
+      <button type="button" class="btn btn-primary" id="enrollCheck">Vérifier mes signatures <svg class="i i-arrow"><use href="#ic-arrow"/></svg></button>
+    </div>
   </div>
 </section>
 
@@ -981,6 +1026,7 @@ function sigFromName(id) {
    ========================================================= */
 let session = null;
 const $ = s => document.querySelector(s);
+const $$ = s => [...document.querySelectorAll(s)];
 
 function audit(action, cible = '—') {
   if (!session) return;
@@ -1109,13 +1155,88 @@ $('#registerForm').addEventListener('submit', e => {
   audit('Connexion');
   $('#registerForm').reset();
   fillDept();
-  showRegister(false);
+  showEnroll(u);
+  toast('Compte créé · enregistrez maintenant votre signature');
+});
+
+/* Étape obligatoire : enregistrement de la signature (trois essais) */
+let enrollUser = null;
+function showEnroll(u) {
+  enrollUser = u;
+  $('#enrollSeuil').textContent = `3 · Comparaison (seuil ${Math.round(SIG_SEUIL * 100)} %)`;
+  $$('#login .login-card').forEach(c => c.classList.toggle('hidden', c.id !== 'enrollCard'));
+  $('#app').classList.add('hidden'); $('#login').classList.remove('hidden');
+  $('#enrollWho').textContent = u.nom;
+  $('#enrollResult').innerHTML = '';
+  $('#enrollCheck').disabled = false;
+  $('#enrollCheck').innerHTML = `Vérifier mes signatures ${icon('arrow', 'i-arrow')}`;
+  $('#enrollCheck').onclick = enrollVerify;
+  $('#enrollGrid').innerHTML = [1, 2, 3].map(i => `<div class="enroll-essai" id="essai${i}">
+    <h3>Essai ${i} <span class="essai-badge"></span></h3>
+    <div class="pad-wrap"><canvas class="pad" id="padEssai${i}"></canvas><div class="pad-hint">${icon('pen')}&nbsp;Signez ici</div></div>
+    <div class="pad-actions"><span class="essai-status" id="statusEssai${i}">Tracez votre signature.</span><button type="button" class="link-btn" onclick="document.getElementById('padEssai${i}').clear()">Effacer</button></div>
+  </div>`).join('');
+  window.scrollTo(0, 0);
+  [1, 2, 3].forEach(i => {
+    const pad = initPad($('#padEssai' + i));
+    pad.addEventListener('strokeend', () => essaiStatus(i, false));
+    pad.addEventListener('cleared', () => { essaiStatus(i, false); $('#enrollResult').innerHTML = ''; $$('.enroll-essai').forEach(e => e.classList.remove('is-ref')); });
+  });
+}
+// Contrôle d'un essai : affiché en direct, et en erreur à la vérification
+function essaiStatus(i, strict) {
+  const pad = $('#padEssai' + i), err = sigCheck(pad.strokes), box = $('#essai' + i), st = $('#statusEssai' + i);
+  const vide = !pad.strokes.length;
+  box.classList.toggle('ok', !err); box.classList.toggle('ko', !!err && (strict || !vide));
+  st.className = 'essai-status ' + (!err ? 'ok' : strict || !vide ? 'ko' : '');
+  st.textContent = !err ? '✓ Essai valide' : vide && !strict ? 'Tracez votre signature.' : err;
+  if (err && strict) pad.classList.add('invalid');
+  return !err;
+}
+async function enrollVerify() {
+  const u = enrollUser;
+  if (![1, 2, 3].map(i => essaiStatus(i, true)).every(Boolean)) { $('#enrollResult').innerHTML = ''; toast('Corrigez les essais signalés'); return; }
+  const essais = [1, 2, 3].map(i => $('#padEssai' + i).strokes);
+  const r = sigCompare(essais);
+  const pct = v => Math.round(v * 100) + ' %';
+  const rows = r.paires.map(p => `<div class="score-row"><span>Essais ${p.i + 1} et ${p.j + 1}</span><div class="score-bar ${p.score < SIG_SEUIL ? 'low' : ''}"><i style="width:${(p.score * 100).toFixed(1)}%"></i><b style="left:${SIG_SEUIL * 100}%"></b></div><b>${pct(p.score)}</b></div>`).join('');
+  const crit = `<p class="hint" style="margin:0">Score calculé après normalisation de la taille et de la position : forme ${pct(r.paires[0].detail.forme)}, tracé ${pct(r.paires[0].detail.trace)}, proportions ${pct(r.paires[0].detail.proportions)}, nombre de traits ${pct(r.paires[0].detail.traits)} (essais 1 et 2).</p>`;
+  if (!r.valide) {
+    audit(`Enregistrement de la signature refusé (score ${pct(r.minimum)} < ${pct(SIG_SEUIL)})`, u.id);
+    $('#enrollResult').innerHTML = `<div class="alert alert-danger">${icon('x')}<div><b>Vos trois signatures ne se ressemblent pas assez</b><p>Le score le plus faible est de ${pct(r.minimum)}, pour un minimum de ${pct(SIG_SEUIL)}. Effacez les essais et signez à nouveau trois fois, de la même manière et à la même taille.</p><button class="btn btn-ghost btn-sm" onclick="[1,2,3].forEach(i => document.getElementById('padEssai' + i).clear())">${icon('pen')} Recommencer</button></div></div>${rows}${crit}`;
+    return;
+  }
+  // Référence : l'essai le plus proche des deux autres
+  const traits = essais[r.reference];
+  $('#essai' + (r.reference + 1)).classList.add('is-ref');
+  $('#essai' + (r.reference + 1)).querySelector('.essai-badge').innerHTML = '<span class="badge b-success">Référence</span>';
+  $('#enrollCheck').disabled = true;
+  const png = sigPng(traits);
+  if (sigKey) u.sigRef = await sigEncrypt(u.id, { png, traits, source: 'enrôlement', score: r.minimum, essai: r.reference + 1 });
+  delete u.sigSeed;
+  audit(`Signature de référence enregistrée (essai ${r.reference + 1}, score ${pct(r.minimum)}, chiffrée AES-256-GCM)`, u.id);
+  $('#enrollResult').innerHTML = `<div class="alert alert-success">${icon('check')}<div><b>Signature validée et enregistrée</b><p>Les trois essais dépassent le seuil de ${pct(SIG_SEUIL)} (score le plus faible : ${pct(r.minimum)}). L'essai ${r.reference + 1}, le plus représentatif, est retenu comme référence.</p></div></div>${rows}${crit}
+    <div class="ref-preview"><div class="sign-box"><img src="${png}" alt="Signature de référence"></div><div class="ref-meta"><b>${icon('lock')} Signature de référence (essai ${r.reference + 1})</b><span>Stockée chiffrée (AES-256-GCM) et liée à votre identifiant</span><span>Image PNG transparente + ${traits.length} traits vectoriels</span><span>Empreinte <code>${u.sigRef ? u.sigRef.empreinte.slice(0, 16) + '…' : '—'}</code></span></div></div>`;
+  $('#enrollCheck').disabled = false;
+  $('#enrollCheck').innerHTML = `Accéder à l'application ${icon('arrow', 'i-arrow')}`;
+  $('#enrollCheck').onclick = () => enterApp(u);
+}
+$('#enrollLater').addEventListener('click', () => {
+  audit('Enregistrement de la signature reporté · déconnexion', enrollUser?.id);
+  session = null; enrollUser = null;
+  $('#enrollCard').classList.add('hidden');
+  $('.login-card:not(.register-card):not(.enroll-card)').classList.remove('hidden');
+  toast('Votre signature vous sera demandée à la prochaine connexion.');
+});
+function enterApp(u) {
+  $('#enrollCard').classList.add('hidden');
+  $('.login-card:not(.register-card):not(.enroll-card)').classList.remove('hidden');
   $('#login').classList.add('hidden');
   $('#app').classList.remove('hidden');
   location.hash = '#/tableau-de-bord';
   render();
-  toast(`Compte créé · bienvenue ${u.nom}`);
-});
+  toast(`Bienvenue ${u.nom}`);
+}
 
 function startSession(u) {
   if (!startSession.sealed) { sealAll(); startSession.sealed = true; }
@@ -1144,6 +1265,7 @@ $('#loginForm').addEventListener('submit', e => {
   err.textContent = '';
   startSession(u);
   audit('Connexion');
+  if (!hasSig(u)) { showEnroll(u); return; }
   $('#login').classList.add('hidden');
   $('#app').classList.remove('hidden');
   location.hash = '#/tableau-de-bord';
@@ -1155,6 +1277,7 @@ $('#profileSwitch').addEventListener('change', e => {
   audit('Déconnexion');
   startSession(userById(e.target.value));
   audit('Connexion');
+  if (!hasSig(userById(e.target.value))) { showEnroll(userById(e.target.value)); return; }
   toast(`Connecté(e) en tant que ${session.name}`);
   if (location.hash === '#/tableau-de-bord') render(); else location.hash = '#/tableau-de-bord';
 });
@@ -1165,6 +1288,8 @@ $('#logout').addEventListener('click', () => {
   closeModal();
   $('#app').classList.add('hidden');
   $('#login').classList.remove('hidden');
+  $('#enrollCard').classList.add('hidden'); $('#registerCard').classList.add('hidden');
+  $('.login-card:not(.register-card):not(.enroll-card)').classList.remove('hidden');
   history.replaceState(null, '', location.pathname);
 });
 
@@ -1281,6 +1406,136 @@ function demandeTable(list, empty = 'Aucune demande.') {
       </tr>`).join('')}</tbody></table></div>`;
 }
 
+/* =========================================================
+   Signature de référence : enregistrée à la création du compte (trois essais comparés),
+   chiffrée au repos (AES-256-GCM, liée à l'identifiant de l'utilisateur), apposée
+   automatiquement lorsque le N+1 valide une FED.
+   ========================================================= */
+/* Comparaison de signatures manuscrites (traits = [[{x, y}, …], …]) */
+const SIG_SEUIL = 0.80;          // score minimal entre chaque paire d'essais
+const SIG_MIN_TRAITS = 2;        // nombre minimal de traits par essai
+const SIG_MIN_LARGEUR = 100;     // taille minimale du tracé (px CSS)
+const SIG_MIN_HAUTEUR = 30;
+const SIG_POIDS = { forme: 0.30, trace: 0.45, proportions: 0.15, traits: 0.10 };
+
+const sigTraits = strokes => strokes.filter(s => s.length >= 2);
+function sigBox(strokes) {
+  const pts = strokes.flat();
+  const xs = pts.map(p => p.x), ys = pts.map(p => p.y);
+  const x0 = Math.min(...xs), y0 = Math.min(...ys), x1 = Math.max(...xs), y1 = Math.max(...ys);
+  return { x0, y0, w: x1 - x0, h: y1 - y0 };
+}
+// Contrôle d'un essai : non vide, nombre minimal de traits, taille suffisante
+function sigCheck(strokes) {
+  const t = sigTraits(strokes);
+  if (!t.length) return 'Signature vide : tracez votre signature.';
+  if (t.length < SIG_MIN_TRAITS) return `Signature trop simple : au moins ${SIG_MIN_TRAITS} traits sont attendus.`;
+  const b = sigBox(t);
+  if (b.w < SIG_MIN_LARGEUR || b.h < SIG_MIN_HAUTEUR) return 'Signature trop petite : utilisez davantage l’espace de tracé.';
+  return '';
+}
+// Normalisation : la boîte englobante est centrée et ramenée à 1 sur son plus grand côté
+function sigNormalize(strokes) {
+  const t = sigTraits(strokes), b = sigBox(t), k = Math.max(b.w, b.h) || 1;
+  const cx = b.x0 + b.w / 2, cy = b.y0 + b.h / 2;
+  return { traits: t.map(s => s.map(p => ({ x: (p.x - cx) / k, y: (p.y - cy) / k }))), ratio: b.w / Math.max(b.h, 1) };
+}
+// Rééchantillonnage du tracé en n points répartis à distance égale le long des traits
+function sigResample(traits, n = 64) {
+  const seg = [];
+  traits.forEach(s => { for (let i = 1; i < s.length; i++) seg.push([s[i - 1], s[i], Math.hypot(s[i].x - s[i - 1].x, s[i].y - s[i - 1].y)]); });
+  const total = seg.reduce((a, s) => a + s[2], 0) || 1, step = total / (n - 1), out = [seg[0][0]];
+  let acc = 0, next = step;
+  for (const [a, b, l] of seg) {
+    while (l > 0 && acc + l >= next && out.length < n) { const r = (next - acc) / l; out.push({ x: a.x + (b.x - a.x) * r, y: a.y + (b.y - a.y) * r }); next += step; }
+    acc += l;
+  }
+  while (out.length < n) out.push(seg.at(-1)[1]);
+  return out;
+}
+// Forme : recouvrement des tracés rastérisés sur une grille 32 × 32, avec tolérance d'une case
+function sigGrid(traits, g = 24) {
+  const m = new Uint8Array(g * g), cell = v => Math.min(g - 1, Math.max(0, Math.floor((v + 0.5) * g)));
+  traits.forEach(s => { for (let i = 1; i < s.length; i++) {
+    const a = s[i - 1], b = s[i], k = Math.max(1, Math.ceil(Math.hypot(b.x - a.x, b.y - a.y) * g * 2));
+    for (let j = 0; j <= k; j++) m[cell(a.y + (b.y - a.y) * j / k) * g + cell(a.x + (b.x - a.x) * j / k)] = 1;
+  } });
+  return m;
+}
+function sigForme(ta, tb, g = 32) {
+  const A = sigGrid(ta, g), B = sigGrid(tb, g);
+  const near = (M, i) => { const r = Math.floor(i / g), c = i % g;
+    for (let dr = -1; dr <= 1; dr++) for (let dc = -1; dc <= 1; dc++) { const rr = r + dr, cc = c + dc; if (rr >= 0 && rr < g && cc >= 0 && cc < g && M[rr * g + cc]) return true; } return false; };
+  let na = 0, nb = 0, ha = 0, hb = 0;
+  for (let i = 0; i < g * g; i++) { if (A[i]) { na++; if (near(B, i)) ha++; } if (B[i]) { nb++; if (near(A, i)) hb++; } }
+  return na && nb ? (ha / na + hb / nb) / 2 : 0;
+}
+// Tracé : écart moyen entre les deux trajectoires alignées (DTW) et histogramme des directions
+function sigTrace(pa, pb) {
+  const n = pa.length, w = Math.ceil(n / 6), D = Array.from({ length: n + 1 }, () => new Float64Array(n + 1).fill(Infinity));
+  D[0][0] = 0;
+  for (let i = 1; i <= n; i++) for (let j = Math.max(1, i - w); j <= Math.min(n, i + w); j++)
+    D[i][j] = Math.hypot(pa[i - 1].x - pb[j - 1].x, pa[i - 1].y - pb[j - 1].y) + Math.min(D[i - 1][j], D[i][j - 1], D[i - 1][j - 1]);
+  const dtw = Math.max(0, 1 - D[n][n] / n / 0.18);
+  const hist = p => { const h = new Array(8).fill(0); for (let i = 1; i < p.length; i++) { const a = Math.atan2(p[i].y - p[i - 1].y, p[i].x - p[i - 1].x); h[(Math.round(a / (Math.PI / 4)) + 8) % 8]++; } const s = h.reduce((x, y) => x + y, 0) || 1; return h.map(v => v / s); };
+  const ha = hist(pa), hb = hist(pb), dir = ha.reduce((s, v, i) => s + Math.min(v, hb[i]), 0);
+  return 0.7 * dtw + 0.3 * dir;
+}
+// Score de similarité entre deux essais (0 à 1) et son détail
+function sigScore(sa, sb) {
+  const a = sigNormalize(sa), b = sigNormalize(sb);
+  const detail = {
+    forme: sigForme(a.traits, b.traits),
+    trace: sigTrace(sigResample(a.traits), sigResample(b.traits)),
+    proportions: Math.min(a.ratio, b.ratio) / Math.max(a.ratio, b.ratio),
+    traits: 1 - Math.abs(a.traits.length - b.traits.length) / Math.max(a.traits.length, b.traits.length),
+  };
+  const score = Object.keys(SIG_POIDS).reduce((s, k) => s + SIG_POIDS[k] * detail[k], 0);
+  return { score, detail };
+}
+// Compare les trois essais : validés si chaque paire dépasse le seuil ; référence = essai le plus proche des deux autres
+function sigCompare(essais, seuil = SIG_SEUIL) {
+  const paires = [[0, 1], [0, 2], [1, 2]].map(([i, j]) => ({ i, j, ...sigScore(essais[i], essais[j]) }));
+  const proximite = [0, 1, 2].map(k => paires.filter(p => p.i === k || p.j === k).reduce((s, p) => s + p.score, 0) / 2);
+  const reference = proximite.indexOf(Math.max(...proximite));
+  const minimum = Math.min(...paires.map(p => p.score));
+  return { valide: minimum >= seuil, minimum, paires, proximite, reference };
+}
+
+// Rendu d'un tracé en PNG transparent, recadré sur la signature
+function sigPng(strokes) {
+  const t = sigTraits(strokes), b = sigBox(t), pad = 12, ratio = 2;
+  const c = document.createElement('canvas'); c.width = (b.w + pad * 2) * ratio; c.height = (b.h + pad * 2) * ratio;
+  const x = c.getContext('2d'); x.scale(ratio, ratio); x.lineWidth = 2.2; x.lineCap = 'round'; x.lineJoin = 'round'; x.strokeStyle = '#2F3437';
+  t.forEach(s => { x.beginPath(); s.forEach((p, i) => i ? x.lineTo(p.x - b.x0 + pad, p.y - b.y0 + pad) : x.moveTo(p.x - b.x0 + pad, p.y - b.y0 + pad)); x.stroke(); });
+  return c.toDataURL('image/png');
+}
+// Chiffrement au repos : clé AES-256-GCM non exportable (côté serveur dans l'application réelle) ;
+// l'identifiant de l'utilisateur est lié au chiffré (données authentifiées) : un chiffré copié sur un autre compte ne se déchiffre pas.
+const sigKey = window.crypto?.subtle ? crypto.subtle.generateKey({ name: 'AES-GCM', length: 256 }, false, ['encrypt', 'decrypt']) : null;
+const toB64 = buf => { const u = new Uint8Array(buf); let s = ''; for (let i = 0; i < u.length; i += 0x8000) s += String.fromCharCode(...u.subarray(i, i + 0x8000)); return btoa(s); };
+const fromB64 = str => Uint8Array.from(atob(str), ch => ch.charCodeAt(0));
+async function sigEncrypt(userId, contenu) {
+  const clair = JSON.stringify({ userId, ...contenu });
+  const iv = crypto.getRandomValues(new Uint8Array(12));
+  const data = await crypto.subtle.encrypt({ name: 'AES-GCM', iv, additionalData: new TextEncoder().encode(userId) }, await sigKey, new TextEncoder().encode(clair));
+  return { alg: 'AES-256-GCM', iv: toB64(iv), data: toB64(data), empreinte: sha256(clair), creeLe: nowIso(), source: contenu.source };
+}
+async function sigDecrypt(userId, rec) {
+  const clair = await crypto.subtle.decrypt({ name: 'AES-GCM', iv: fromB64(rec.iv), additionalData: new TextEncoder().encode(userId) }, await sigKey, fromB64(rec.data));
+  return JSON.parse(new TextDecoder().decode(clair));
+}
+// Comptes de démonstration : signature de référence fictive, chiffrée au chargement
+USERS.forEach(u => { u.sigSeed = true; });
+const seedRefs = sigKey ? Promise.all(USERS.map(async u => { u.sigRef = await sigEncrypt(u.id, { png: sigFromName(u.id), traits: null, source: 'démo' }); })) : Promise.resolve();
+const hasSig = u => !!(u?.sigRef || u?.sigSeed);
+async function refSignature(id) {
+  await seedRefs;
+  const u = userById(id);
+  if (!u?.sigRef) return null;
+  try { return await sigDecrypt(id, u.sigRef); } catch { return null; }
+}
+
 /* Pad de signature (souris, stylet ou doigt) */
 function initPad(canvas) {
   const ratio = window.devicePixelRatio || 1;
@@ -1290,18 +1545,19 @@ function initPad(canvas) {
   ctx.scale(ratio, ratio); ctx.lineWidth = 2.2; ctx.lineCap = 'round'; ctx.lineJoin = 'round'; ctx.strokeStyle = '#2F3437';
   let drawing = false, last = null;
   canvas.isEmpty = true;
+  canvas.strokes = []; // données vectorielles : un tableau de points par trait
   const pos = e => { const b = canvas.getBoundingClientRect(); return { x: e.clientX - b.left, y: e.clientY - b.top }; };
-  canvas.addEventListener('pointerdown', e => { drawing = true; last = pos(e); canvas.setPointerCapture(e.pointerId); });
+  canvas.addEventListener('pointerdown', e => { drawing = true; last = pos(e); canvas.strokes.push([last]); canvas.setPointerCapture(e.pointerId); });
   canvas.addEventListener('pointermove', e => {
     if (!drawing) return;
     const p = pos(e);
     ctx.beginPath(); ctx.moveTo(last.x, last.y); ctx.lineTo(p.x, p.y); ctx.stroke();
-    last = p;
+    last = p; canvas.strokes.at(-1).push(p);
     if (canvas.isEmpty) { canvas.isEmpty = false; canvas.classList.add('signed'); canvas.classList.remove('invalid'); }
   });
-  const stop = () => { drawing = false; };
+  const stop = () => { if (drawing) canvas.dispatchEvent(new Event('strokeend')); drawing = false; };
   canvas.addEventListener('pointerup', stop); canvas.addEventListener('pointercancel', stop);
-  canvas.clear = () => { ctx.clearRect(0, 0, canvas.width, canvas.height); canvas.isEmpty = true; canvas.classList.remove('signed'); };
+  canvas.clear = () => { ctx.clearRect(0, 0, canvas.width, canvas.height); canvas.isEmpty = true; canvas.strokes = []; canvas.classList.remove('signed'); canvas.dispatchEvent(new Event('cleared')); };
   return canvas;
 }
 const padHtml = (id, hint) => `
@@ -1402,26 +1658,19 @@ function checkCertify(id) {
 }
 
 function signatureBlock(sig, waitingFor, d, level) {
-  if (sig) return `<div class="sign-box"><img src="${sig.img || sigFromName(sig.by)}" alt="Signature de ${esc(nom(sig.by))}"></div>
+  if (sig) return `<div class="sign-box"><img ${sig.auto ? 'class="apposee" title="Signature enregistrée, apposée automatiquement"' : ''} src="${sig.img || sigFromName(sig.by)}" alt="Signature de ${esc(nom(sig.by))}"></div>
     <div class="sign-meta">${esc(nom(sig.by))} · ${fDate(sig.at)} à ${fTime(sig.at)}</div>${d ? lockLine(d, level) : ''}`;
   return `<div class="sign-box">${waitingFor}</div><div class="sign-meta">&nbsp;</div>`;
 }
 
-/* Formulaire du N+1 : décision, commentaire, signature */
+/* Formulaire du N+1 : un clic sur « Valider » appose sa signature enregistrée */
 function n1FormHtml(d) {
   return `<div class="level-form" id="n1Form">
-    <div class="radio-row"><label><input type="radio" name="n1dec" value="ok" checked onchange="n1Dec()"> Valider</label><label><input type="radio" name="n1dec" value="ko" onchange="n1Dec()"> Rejeter</label></div>
-    <textarea class="input" id="n1Com" rows="2" placeholder="Commentaire (obligatoire en cas de rejet, visible par ${esc(nom(d.demandeur))})"></textarea><div class="field-error" id="eN1Com"></div>
-    <div id="n1PadWrap">${padHtml('padManager', 'Signez ici pour valider')}<div class="field-error" id="eSigM"></div></div>
-    ${certifyHtml('n1Cert')}
-    <button class="btn btn-success" id="n1Submit" style="justify-content:center" onclick="submitN1('${d.ref}')">${icon('check')} Signer et valider</button>
+    <div class="sign-box n1-slot">${icon('pen')}&nbsp;Votre signature enregistrée sera apposée ici</div>
+    <textarea class="input" id="n1Com" rows="2" placeholder="Commentaire (facultatif ; obligatoire pour rejeter, visible par ${esc(nom(d.demandeur))})"></textarea><div class="field-error" id="eN1Com"></div>
+    <p class="hint" style="margin:0">${icon('lock')} En cliquant sur « Valider », votre signature enregistrée est apposée automatiquement et la FED est verrouillée.</p>
+    <div class="n1-actions"><button class="btn btn-ghost" id="n1Rejeter" onclick="submitN1('${d.ref}', false)">${icon('x')} Rejeter</button><button class="btn btn-success" id="n1Valider" onclick="submitN1('${d.ref}', true)">${icon('check')} Valider</button></div>
   </div>`;
-}
-function n1Dec() {
-  const ko = document.querySelector('input[name=n1dec]:checked').value === 'ko';
-  $('#n1PadWrap').classList.toggle('hidden', ko);
-  $('#n1Submit').className = 'btn ' + (ko ? 'btn-danger' : 'btn-success');
-  $('#n1Submit').innerHTML = ko ? `${icon('x')} Signer le rejet et notifier` : `${icon('check')} Signer et valider`;
 }
 
 /* La fiche, au format du formulaire papier 05SUP02V03 */
@@ -1626,7 +1875,6 @@ function viewDemande(ref) {
   const isCfo = session.id === CFO_ID && d.statut === 'cfo';
   const isMenueActor = d.statut.startsWith('m_') && actorOf(d) === session.id;
   const isMenueCompta = isMenueActor && d.statut === 'm_compta';
-  if (isN1) afterRender = () => { initPad($('#padManager')).addEventListener('pointerdown', () => { $('#eSigM').textContent = ''; }); };
   if (isMenueActor && !isMenueCompta) afterRender = () => { initPad($('#padMenue')).addEventListener('pointerdown', () => { $('#eSigMenue').textContent = ''; }); };
   if (isMenueCompta) afterRender = () => {
     comptaPieces = [];
@@ -1675,7 +1923,7 @@ function viewDemande(ref) {
     <button class="btn btn-primary" onclick="document.getElementById('cfoForm').scrollIntoView({behavior:'smooth'})">${icon('pen')} Compléter et signer</button>` : isRaf ? `
     <button class="btn btn-ghost" onclick="openReturn('${d.ref}')">${icon('arrow', 'i-back')} Retourner au N+1</button>
     <button class="btn btn-primary" onclick="document.getElementById('rafForm').scrollIntoView({behavior:'smooth'})">${icon('pen')} Compléter et signer</button>` : isN1 ? `
-    <button class="btn btn-primary" onclick="document.getElementById('n1Form').scrollIntoView({behavior:'smooth',block:'center'})">${icon('pen')} Remplir mon formulaire de validation</button>` : '');
+    <button class="btn btn-primary" onclick="document.getElementById('n1Form').scrollIntoView({behavior:'smooth',block:'center'})">${icon('check')} Valider ou rejeter</button>` : '');
   let banner = '';
   if (d.statut === 'rejetee') banner = `<div class="alert alert-danger">${icon('message')}<div><b>Demande rejetée par ${esc(nom(d.rejetPar || d.n1))}</b><p>« ${esc(d.commentaire)} »</p>${isOwner ? `<a class="btn btn-ghost btn-sm" href="#/nouvelle-demande/${d.ref}">${icon('pen')} Corriger et renvoyer</a>` : ''}</div></div>`;
   else if (isBcCompta) banner = `<div class="alert alert-warning">${icon('file')}<div><b>FED validée pour ${fcfa(d.cfo.montant)} : établissez le bon de commande</b><p>Complétez le bon de commande en bas de page, puis délivrez-le à Facilities. Le délai d'achat de 72 h démarre à la délivrance.</p></div></div>`;
@@ -1694,7 +1942,7 @@ function viewDemande(ref) {
   else if (isRaf) banner = `<div class="alert alert-warning">${icon('inbox')}<div><b>Cette demande attend votre validation</b><p>Les parties Demandeur et Manager sont en lecture seule. Complétez votre partie en bas de la fiche et signez, ou retournez-la au N+1 si elle est mal remplie.</p></div></div>`;
   else if (d.statut === 'raf') banner = `<div class="alert alert-warning">${icon('clock')}<div><b>Validée par ${esc(nom(d.n1))} (N+1)</b><p>En attente de la validation de ${esc(nom(RAF_ID))} (RAF/HF).</p></div></div>`;
   else if (isN1 && d.retourRaf) banner = `<div class="alert alert-danger">${icon('message')}<div><b>Retournée par ${esc(nom(d.retourRaf.by))} (RAF/HF) le ${fDate(d.retourRaf.at)} à ${fTime(d.retourRaf.at)}</b><p>« ${esc(d.retourRaf.comment)} »</p><p class="muted" style="font-size:12.5px">Validez à nouveau si la fiche est correcte, ou rejetez-la vers ${esc(nom(d.demandeur))} pour correction.</p></div></div>`;
-  else if (isN1) banner = `<div class="alert alert-warning">${icon('inbox')}<div><b>Cette demande attend votre décision</b><p>Remplissez votre formulaire de validation dans la case « Signature Manager » : validez en signant, ou rejetez avec un commentaire transmis à ${esc(nom(d.demandeur))}.</p></div></div>`;
+  else if (isN1) banner = `<div class="alert alert-warning">${icon('inbox')}<div><b>Cette demande attend votre décision</b><p>Dans la case « Signature Manager », cliquez sur « Valider » : votre signature enregistrée y est apposée automatiquement. Pour rejeter, saisissez un commentaire, il sera transmis à ${esc(nom(d.demandeur))}.</p></div></div>`;
   else if (d.statut === 'attente' && d.retourRaf) banner = `<div class="alert alert-warning">${icon('clock')}<div><b>Retournée au N+1 par le RAF/HF</b><p>« ${esc(d.retourRaf.comment)} »</p></div></div>`;
   else if (d.statut === 'attente') banner = `<div class="alert alert-warning">${icon('clock')}<div><b>En attente de validation</b><p>Transmise à ${esc(nom(d.n1))} (N+1) le ${fDate(d.date)} à ${fTime(d.date)}.</p></div></div>`;
   // Circuit complet : FED (N+1, RAF/HF, CFO), puis fiche de menues dépenses pour une menue dépense
@@ -2265,13 +2513,14 @@ function viewUsers() {
   return `
     ${pageHead('Utilisateurs & rôles', `Accès limité aux adresses @${ALLOWED_DOMAIN}. Chaque utilisateur appartient à un département ; son N+1, qui signe ses FED, appartient au même département.`, `<button class="btn btn-primary" onclick="toast('Invitation envoyée (démo)'); audit('Invitation utilisateur')">${icon('plus', 'i-plus')} Inviter</button>`)}
     <div class="table-wrap"><table>
-      <thead><tr><th>Utilisateur</th><th>E-mail</th><th>Fonction</th><th>Département · service</th><th>Rôle</th><th>N+1</th><th>Menues dépenses</th><th>Statut</th><th>Dernière connexion</th></tr></thead>
+      <thead><tr><th>Utilisateur</th><th>E-mail</th><th>Fonction</th><th>Département · service</th><th>Rôle</th><th>N+1</th><th>Signature</th><th>Menues dépenses</th><th>Statut</th><th>Dernière connexion</th></tr></thead>
       <tbody>${USERS.map(u => `<tr>
         <td><div class="who"><div class="avatar">${initials(u.nom)}</div><b>${esc(u.nom)}</b></div></td>
         <td class="muted">${u.id}@${ALLOWED_DOMAIN}</td>
         <td>${esc(u.fonction)}</td><td><b>${esc(u.dept || '—')}</b><div class="muted" style="font-size:12px">${esc(u.service)}</div></td>
         <td>${ROLES[u.role].label}</td>
         <td>${!u.n1 ? '<span class="muted">—</span>' : memeDept(u.n1, u.id) ? esc(nom(u.n1)) : `${esc(nom(u.n1))}<div><span class="badge b-danger">${icon('x')} Autre département</span></div>`}</td>
+        <td>${u.sigRef && u.sigRef.source !== 'démo' ? `<span class="badge b-success" title="Chiffrée AES-256-GCM · empreinte ${u.sigRef.empreinte.slice(0, 12)}…">${icon('lock')} Enregistrée</span><div class="muted" style="font-size:12px">${fDate(u.sigRef.creeLe)}</div>` : hasSig(u) ? `<span class="badge b-neutral" title="Signature fictive des comptes de démonstration">${icon('lock')} Démo</span>` : '<span class="badge b-warning">À enregistrer</span>'}</td>
         <td><label class="switch" title="Compte menues dépenses"><input type="checkbox" ${u.menues ? 'checked' : ''} onchange="toggleMenues('${u.id}', this.checked)"><span></span></label>${u.menues && u.compteMD ? `<div class="ref">${u.compteMD}</div>` : ''}</td>
         <td>${u.actif ? '<span class="badge b-success">Actif</span>' : '<span class="badge b-neutral">Désactivé</span>'}</td>
         <td>${fDateTime(u.derniere)}</td></tr>`).join('')}</tbody>
@@ -2376,18 +2625,14 @@ function openModal(html, onReady) {
 function closeModal() { $('#modalRoot').innerHTML = ''; }
 document.addEventListener('keydown', e => { if (e.key === 'Escape') closeModal(); });
 
-function submitN1(ref) {
+async function submitN1(ref, valider) {
   const d = DEMANDES.find(x => x.ref === ref);
   if (!n1Habilite(d)) { audit('Signature N+1 refusée (autre département)', ref); toast('Vous n\'appartenez pas au département du demandeur : vous ne pouvez pas signer cette FED.'); return; }
-  const ko = document.querySelector('input[name=n1dec]:checked').value === 'ko';
-  const com = $('#n1Com').value.trim(), pad = $('#padManager');
-  let ok = true;
-  $('#eN1Com').textContent = ko && com.length < 10 ? 'Le motif du rejet est obligatoire (10 caractères minimum).' : ''; if (ko && com.length < 10) ok = false;
-  if (!ko) { $('#eSigM').textContent = pad.isEmpty ? 'Votre signature est obligatoire pour valider.' : ''; if (pad.isEmpty) { ok = false; pad.classList.add('invalid'); } }
-  if (!checkCertify('n1Cert')) ok = false;
-  if (!ok) { toast('Complétez votre formulaire de validation'); return; }
+  if (d.statut !== 'attente' || d.n1 !== session.id) return;
+  const com = $('#n1Com').value.trim();
   const now = nowIso();
-  if (ko) {
+  if (!valider) {
+    if (com.length < 10) { $('#eN1Com').textContent = 'Le motif du rejet est obligatoire (10 caractères minimum).'; $('#n1Com').classList.add('invalid'); $('#n1Com').focus(); return; }
     Object.assign(d, { statut: 'rejetee', commentaire: com, retourRaf: null, rejetPar: session.id, rejetEtape: 'attente' });
     d.historique.push({ at: now, by: session.id, action: 'Demande rejetée par le N+1', note: com });
     notify(d.demandeur, ref, `Votre demande a été rejetée par ${session.name} : « ${com.length > 70 ? com.slice(0, 70) + '…' : com} »`);
@@ -2396,13 +2641,22 @@ function submitN1(ref) {
     render();
     return;
   }
-  Object.assign(d, { statut: 'raf', sigManager: { by: session.id, at: now, img: pad.toDataURL(), note: com }, commentaire: com, retourRaf: null });
+  $('#n1Valider').disabled = true; $('#n1Valider').innerHTML = `${icon('lock')} Apposition…`;
+  const refSig = await refSignature(session.id);
+  if (!refSig) {
+    $('#n1Valider').disabled = false; $('#n1Valider').innerHTML = `${icon('check')} Valider`;
+    toast('Aucune signature enregistrée : enregistrez-la avant de valider.');
+    showEnroll(userById(session.id));
+    return;
+  }
+  const rec = userById(session.id).sigRef;
+  Object.assign(d, { statut: 'raf', sigManager: { by: session.id, at: now, img: refSig.png, note: com, auto: true, refEmpreinte: rec.empreinte }, commentaire: com, retourRaf: null });
   seal(d, 'manager');
-  d.historique.push({ at: now, by: session.id, action: 'Validée et signée électroniquement par le N+1, transmise au RAF/HF', note: com || undefined });
+  d.historique.push({ at: now, by: session.id, action: 'Validée par le N+1 : signature enregistrée apposée automatiquement, transmise au RAF/HF', note: com || undefined });
   notify(d.demandeur, ref, `Votre demande a été validée par ${session.name} et transmise au RAF/HF.`);
   notify(RAF_ID, ref, `${session.name} a validé une demande de ${nom(d.demandeur)} : elle attend votre validation.`);
-  audit(`Signature électronique · ${LEVELS.manager}`, ref);
-  toast(`Formulaire N+1 signé et verrouillé · transmis à ${nom(RAF_ID)} (RAF/HF)`);
+  audit(`Signature électronique · ${LEVELS.manager} (signature enregistrée)`, ref);
+  toast(`Signature apposée et formulaire verrouillé · transmis à ${nom(RAF_ID)} (RAF/HF)`);
   render();
 }
 
