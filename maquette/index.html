@@ -1304,9 +1304,9 @@ async function enrollVerify() {
   const pct = v => Math.round(v * 100) + ' %';
   const thumbs = `<div class="thumbs" style="grid-template-columns:repeat(3,minmax(0,1fr))">${enroll.essais.map((e, i) => `<div class="thumb ${i === r.reference && r.valide ? 'now' : ''}"><div class="row"><b>Essai ${i + 1}</b></div><div class="img"><img src="${sigPng(e)}" alt="Essai ${i + 1}"></div></div>`).join('')}</div>`;
   if (!r.valide) {
-    audit(`Enregistrement de la signature refusé (score ${pct(r.minimum)} < ${pct(SIG_SEUIL)})`, u.id);
+    audit(`Enregistrement de la signature refusé (meilleure ressemblance ${pct(r.score)} < ${pct(SIG_SEUIL)})`, u.id);
     $('#enrollStepper li:last-child')?.classList.add('current');
-    body.innerHTML = `<div class="enroll-result"><div class="alert alert-danger">${icon('x')}<div><b>Vos trois signatures sont trop différentes</b><p>Recommencez en signant les trois fois de la même manière.</p></div></div>${thumbs}</div>`;
+    body.innerHTML = `<div class="enroll-result"><div class="alert alert-danger">${icon('x')}<div><b>Vos signatures sont trop différentes</b><p>Au moins deux essais doivent se ressembler. Recommencez en signant de la même manière.</p></div></div>${thumbs}</div>`;
     next.disabled = false; next.innerHTML = `${icon('pen')} Recommencer`;
     next.onclick = () => { enroll.essais = [null, null, null]; enroll.result = null; enrollGo(1); };
     $('#enrollPrev').classList.add('hidden');
@@ -1317,7 +1317,7 @@ async function enrollVerify() {
   if (sigKey) u.sigRef = await sigEncrypt(u.id, { png, traits, source: 'enrôlement', score: r.minimum, essai: r.reference + 1 });
   delete u.sigSeed;
   loadMySig(u.id);
-  audit(`Signature de référence enregistrée (essai ${r.reference + 1}, score ${pct(r.minimum)}, chiffrée AES-256-GCM)`, u.id);
+  audit(`Signature de référence enregistrée (essai ${r.reference + 1}, essais concordants ${r.retenus.map(k => k + 1).sort().join(', ')}, ressemblance ${pct(r.score)}, chiffrée AES-256-GCM)`, u.id);
   $('#enrollStepper').innerHTML = ENROLL_STEPS.map(l => `<li class="done"><span class="dot">${icon('check')}</span><span class="lbl">${l}</span></li>`).join('');
   body.innerHTML = `<div class="enroll-result"><div class="alert alert-success">${icon('check')}<div><b>Signature enregistrée</b><p>Elle sera apposée automatiquement chaque fois que vous validerez une fiche.</p></div></div>
     <div class="ref-preview"><div class="sign-box"><img src="${png}" alt="Votre signature"></div></div></div>`;
@@ -1580,7 +1580,7 @@ function sigTrace(pa, pb) {
   D[0][0] = 0;
   for (let i = 1; i <= n; i++) for (let j = Math.max(1, i - w); j <= Math.min(n, i + w); j++)
     D[i][j] = Math.hypot(pa[i - 1].x - pb[j - 1].x, pa[i - 1].y - pb[j - 1].y) + Math.min(D[i - 1][j], D[i][j - 1], D[i - 1][j - 1]);
-  const dtw = Math.max(0, 1 - D[n][n] / n / 0.22);
+  const dtw = Math.max(0, 1 - D[n][n] / n / 0.18);
   const hist = p => { const h = new Array(8).fill(0); for (let i = 1; i < p.length; i++) { const a = Math.atan2(p[i].y - p[i - 1].y, p[i].x - p[i - 1].x); h[(Math.round(a / (Math.PI / 4)) + 8) % 8]++; } const s = h.reduce((x, y) => x + y, 0) || 1; return h.map(v => v / s); };
   const ha = hist(pa), hb = hist(pb), dir = ha.reduce((s, v, i) => s + Math.min(v, hb[i]), 0);
   return 0.7 * dtw + 0.3 * dir;
@@ -1597,13 +1597,15 @@ function sigScore(sa, sb) {
   const score = Object.keys(SIG_POIDS).reduce((s, k) => s + SIG_POIDS[k] * detail[k], 0);
   return { score, detail };
 }
-// Compare les trois essais : validés si chaque paire dépasse le seuil ; référence = essai le plus proche des deux autres
+// Compare les trois essais : validés dès que deux essais au moins se ressemblent (meilleure paire au-dessus du seuil).
+// Référence : dans la paire la plus ressemblante, l'essai le plus proche de l'ensemble des essais.
 function sigCompare(essais, seuil = SIG_SEUIL) {
   const paires = [[0, 1], [0, 2], [1, 2]].map(([i, j]) => ({ i, j, ...sigScore(essais[i], essais[j]) }));
   const proximite = [0, 1, 2].map(k => paires.filter(p => p.i === k || p.j === k).reduce((s, p) => s + p.score, 0) / 2);
-  const reference = proximite.indexOf(Math.max(...proximite));
-  const minimum = Math.min(...paires.map(p => p.score));
-  return { valide: minimum >= seuil, minimum, paires, proximite, reference };
+  const meilleure = paires.reduce((a, b) => b.score > a.score ? b : a);
+  const reference = proximite[meilleure.i] >= proximite[meilleure.j] ? meilleure.i : meilleure.j;
+  const retenus = [meilleure.i, meilleure.j].concat([0, 1, 2].filter(k => k !== meilleure.i && k !== meilleure.j && paires.some(p => (p.i === k || p.j === k) && p.score >= seuil)));
+  return { valide: meilleure.score >= seuil, score: meilleure.score, minimum: Math.min(...paires.map(p => p.score)), paires, proximite, reference, retenus };
 }
 
 // Rendu d'un tracé en PNG transparent, recadré sur la signature
