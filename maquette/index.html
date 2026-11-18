@@ -569,20 +569,20 @@ label.tranche:hover { border-color: var(--accent); color: var(--accent); }
 
 /* Enregistrement de la signature de référence */
 .enroll-card { max-width: 920px; }
-.stepper { list-style: none; margin: 20px 0 0; padding: 0; display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); counter-reset: none; }
-.stepper li { position: relative; display: grid; justify-items: center; gap: 6px; text-align: center; font-size: 12px; color: var(--text-muted); }
-.stepper li::before { content: ""; position: absolute; top: 15px; left: calc(-50% + 18px); right: calc(50% + 18px); height: 2px; background: var(--border); transition: background var(--t) var(--ease); }
-.stepper li:first-child::before { display: none; }
-.stepper li.done::before, .stepper li.current::before { background: var(--accent); }
-.stepper .dot { width: 32px; height: 32px; border-radius: 50%; display: grid; place-items: center; font-weight: 700; font-size: 13px; background: var(--bg); border: 2px solid var(--border); color: var(--text-muted); transition: all var(--t) var(--ease); }
-.stepper .dot .i { width: 15px; height: 15px; }
-.stepper li.done .dot { background: var(--accent); border-color: var(--accent); color: #fff; }
-.stepper li.current .dot { border-color: var(--accent); color: var(--accent); box-shadow: 0 0 0 5px var(--accent-soft); }
-.stepper li.current { color: var(--text); font-weight: 600; }
-.stepper li.done { cursor: pointer; }
-.stepper li.done:hover .dot { transform: scale(1.08); }
+.enroll-stepper { list-style: none; margin: 20px 0 0; padding: 0; display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); counter-reset: none; }
+.enroll-stepper li { position: relative; display: grid; justify-items: center; gap: 6px; text-align: center; font-size: 12px; color: var(--text-muted); }
+.enroll-stepper li::before { content: ""; position: absolute; top: 15px; left: calc(-50% + 18px); right: calc(50% + 18px); height: 2px; background: var(--border); transition: background var(--t) var(--ease); }
+.enroll-stepper li:first-child::before { display: none; }
+.enroll-stepper li.done::before, .enroll-stepper li.current::before { background: var(--accent); }
+.enroll-stepper .dot { width: 32px; height: 32px; border-radius: 50%; display: grid; place-items: center; font-weight: 700; font-size: 13px; background: var(--bg); border: 2px solid var(--border); color: var(--text-muted); transition: all var(--t) var(--ease); }
+.enroll-stepper .dot .i { width: 15px; height: 15px; }
+.enroll-stepper li.done .dot { background: var(--accent); border-color: var(--accent); color: #fff; }
+.enroll-stepper li.current .dot { border-color: var(--accent); color: var(--accent); box-shadow: 0 0 0 5px var(--accent-soft); }
+.enroll-stepper li.current { color: var(--text); font-weight: 600; }
+.enroll-stepper li.done { cursor: pointer; }
+.enroll-stepper li.done:hover .dot { transform: scale(1.08); }
 .enroll-body { margin-top: 20px; animation: fade .3s var(--ease) both; }
-.enroll-intro { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+.enroll-intro { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }
 .tip { display: flex; gap: 12px; padding: 14px; border: 1px solid var(--border); border-radius: var(--radius); background: var(--surface); transition: border-color var(--t) var(--ease), transform var(--t) var(--ease); }
 .tip:hover { border-color: #D7DAE0; transform: translateY(-1px); }
 .tip .tip-ic { flex: none; width: 34px; height: 34px; border-radius: 10px; display: grid; place-items: center; background: var(--accent-soft); color: var(--accent); }
@@ -612,8 +612,8 @@ label.tranche:hover { border-color: var(--accent); color: var(--accent); }
 .spinner { width: 34px; height: 34px; border-radius: 50%; border: 3px solid var(--accent-soft); border-top-color: var(--accent); animation: spin .8s linear infinite; }
 @keyframes spin { to { transform: rotate(360deg); } }
 @media (max-width: 900px) {
-  .stepper li span.lbl { display: none; }
-  .stepper li.current span.lbl { display: block; }
+  .enroll-stepper li span.lbl { display: none; }
+  .enroll-stepper li.current span.lbl { display: block; }
   .enroll-intro, .essai-layout { grid-template-columns: 1fr; }
   .thumbs { grid-template-columns: repeat(3, minmax(0, 1fr)); }
   .thumbs h3 { grid-column: 1 / -1; }
@@ -725,7 +725,7 @@ label.tranche:hover { border-color: var(--accent); color: var(--accent); }
     <div class="logo"><img class="logo-img logo-lg" alt="Fin'Elle – Filiale du Groupe Cofina"></div>
     <h1 style="margin-top:24px">Enregistrez votre signature</h1>
     <p class="muted" style="margin:4px 0 0">Étape obligatoire avant d'accéder à l'application, <b id="enrollWho" style="color:var(--text)"></b>. Votre signature sera ensuite apposée automatiquement à chaque validation.</p>
-    <ol class="stepper" id="enrollStepper" aria-label="Étapes de l'enregistrement"></ol>
+    <ol class="enroll-stepper" id="enrollStepper" aria-label="Étapes de l'enregistrement"></ol>
     <div class="enroll-body" id="enrollBody"></div>
     <div class="enroll-actions">
       <button type="button" class="link-btn" id="enrollLater">Terminer plus tard (se déconnecter)</button>
@@ -1241,13 +1241,12 @@ function enrollGo(step) {
   window.scrollTo({ top: 0, behavior: 'smooth' });
   if (step === 0) {
     const tips = [
-      ['pen', 'Signez comme sur papier', 'À la souris, au doigt ou au stylet, en un ou plusieurs gestes.'],
-      ['check', `Au moins ${SIG_MIN_TRAITS} traits`, 'Par exemple votre paraphe et un trait de soulignement.'],
-      ['file', 'Utilisez l\u2019espace', `Tracé d'au moins ${SIG_MIN_LARGEUR} × ${SIG_MIN_HAUTEUR} px : signez en grand.`],
-      ['shield', 'Trois fois la même signature', `Les essais doivent se ressembler à ${Math.round(SIG_SEUIL * 100)} % au moins.`],
+      ['pen', 'Signez comme sur papier', 'À la souris ou au stylet.'],
+      ['file', 'Signez en grand', 'Utilisez bien l\u2019espace de signature.'],
+      ['check', 'Trois fois la même signature', 'De la même manière à chaque essai.'],
     ];
     body.innerHTML = `<div class="enroll-intro">${tips.map(([ic, t, d]) => `<div class="tip"><span class="tip-ic">${icon(ic)}</span><div><b>${t}</b><span>${d}</span></div></div>`).join('')}</div>
-      <p class="hint" style="margin:14px 0 0">${icon('lock')} Votre signature de référence sera chiffrée et liée à votre compte. Personne d'autre ne pourra l'utiliser.</p>`;
+`;
     next.disabled = false; next.innerHTML = `Commencer ${icon('arrow', 'i-arrow')}`; next.onclick = () => enrollGo(1);
     return;
   }
@@ -1259,17 +1258,16 @@ function enrollEssai(n) {
   const body = $('#enrollBody'), next = $('#enrollNext');
   const thumb = i => { const e = enroll.essais[i - 1];
     return `<div class="thumb ${e ? 'filled' : ''} ${i === n ? 'now' : ''}" ${e && i !== n ? `onclick="enrollGo(${i})" title="Refaire l'essai ${i}"` : ''}>
-      <div class="row"><b>Essai ${i}</b><span>${i === n ? 'en cours' : e ? 'Refaire' : 'à venir'}</span></div>
+      <div class="row"><b>Essai ${i}</b><span>${e && i !== n ? 'Refaire' : ''}</span></div>
       <div class="img">${e && i !== n ? `<img src="${sigPng(e)}" alt="Essai ${i}">` : i === n ? icon('pen') : ''}</div></div>`; };
   body.innerHTML = `<div class="essai-layout">
     <div class="essai-pad">
-      <div class="essai-head"><h2>Essai ${n} sur 3</h2><span class="muted" style="font-size:12.5px">${n === 1 ? 'Signez naturellement, en grand.' : 'Signez de la même manière que l\u2019essai 1.'}</span></div>
+      <div class="essai-head"><h2>Essai ${n} sur 3</h2></div>
       <div class="pad-wrap"><canvas class="pad" id="padEssai"></canvas><div class="pad-hint">${icon('pen')}&nbsp;Signez ici</div></div>
       <div class="essai-foot">
-        <div class="check-list" id="essaiChecks"></div>
+        <div class="field-error" id="essaiErr"></div>
         <button type="button" class="btn btn-ghost btn-sm" onclick="document.getElementById('padEssai').clear()">${icon('x')} Effacer</button>
       </div>
-      <div class="field-error" id="essaiErr" style="margin-top:6px"></div>
     </div>
     <div class="thumbs"><h3>Vos essais</h3>${[1, 2, 3].map(thumb).join('')}</div>
   </div>`;
@@ -1281,15 +1279,8 @@ function enrollEssai(n) {
     old.forEach(st => { ctx.beginPath(); st.forEach((p, i) => i ? ctx.lineTo(p.x, p.y) : ctx.moveTo(p.x, p.y)); ctx.stroke(); });
     pad.strokes = old.map(st => st.slice()); pad.isEmpty = false; pad.classList.add('signed');
   }
-  const refresh = () => {
-    const t = sigTraits(pad.strokes), b = t.length ? sigBox(t) : { w: 0, h: 0 };
-    const crit = [[t.length > 0, 'Tracé'], [t.length >= SIG_MIN_TRAITS, `${SIG_MIN_TRAITS} traits ou plus`], [b.w >= SIG_MIN_LARGEUR && b.h >= SIG_MIN_HAUTEUR, 'Taille suffisante']];
-    $('#essaiChecks').innerHTML = crit.map(([ok, l]) => `<span class="${ok ? 'ok' : ''}">${icon(ok ? 'check' : 'x')} ${l}</span>`).join('');
-    const ok = !sigCheck(pad.strokes);
-    next.disabled = !ok;
-    if (ok) $('#essaiErr').textContent = '';
-    return ok;
-  };
+  // Le bouton s'active dès que l'utilisateur a signé ; un essai trop petit est signalé au clic
+  const refresh = () => { next.disabled = !sigTraits(pad.strokes).length; $('#essaiErr').textContent = ''; };
   pad.addEventListener('strokeend', refresh);
   pad.addEventListener('cleared', refresh);
   refresh();
@@ -1311,12 +1302,11 @@ async function enrollVerify() {
   await new Promise(res => setTimeout(res, 600));
   const r = enroll.result = sigCompare(enroll.essais);
   const pct = v => Math.round(v * 100) + ' %';
-  const rows = r.paires.map(p => `<div class="score-row"><span>Essais ${p.i + 1} et ${p.j + 1}</span><div class="score-bar ${p.score < SIG_SEUIL ? 'low' : ''}"><i style="width:${(p.score * 100).toFixed(1)}%"></i><b style="left:${SIG_SEUIL * 100}%"></b></div><b>${pct(p.score)}</b></div>`).join('');
-  const thumbs = `<div class="thumbs" style="grid-template-columns:repeat(3,minmax(0,1fr))">${enroll.essais.map((e, i) => `<div class="thumb ${i === r.reference && r.valide ? 'now' : ''}"><div class="row"><b>Essai ${i + 1}</b><span>${i === r.reference && r.valide ? 'Référence' : ''}</span></div><div class="img"><img src="${sigPng(e)}" alt="Essai ${i + 1}"></div></div>`).join('')}</div>`;
+  const thumbs = `<div class="thumbs" style="grid-template-columns:repeat(3,minmax(0,1fr))">${enroll.essais.map((e, i) => `<div class="thumb ${i === r.reference && r.valide ? 'now' : ''}"><div class="row"><b>Essai ${i + 1}</b></div><div class="img"><img src="${sigPng(e)}" alt="Essai ${i + 1}"></div></div>`).join('')}</div>`;
   if (!r.valide) {
     audit(`Enregistrement de la signature refusé (score ${pct(r.minimum)} < ${pct(SIG_SEUIL)})`, u.id);
     $('#enrollStepper li:last-child')?.classList.add('current');
-    body.innerHTML = `<div class="enroll-result"><div class="alert alert-danger">${icon('x')}<div><b>Vos trois signatures ne se ressemblent pas assez</b><p>Le score le plus faible est de ${pct(r.minimum)}, pour un minimum de ${pct(SIG_SEUIL)}. Recommencez en signant les trois fois de la même manière et à la même taille.</p></div></div>${thumbs}${rows}</div>`;
+    body.innerHTML = `<div class="enroll-result"><div class="alert alert-danger">${icon('x')}<div><b>Vos trois signatures sont trop différentes</b><p>Recommencez en signant les trois fois de la même manière.</p></div></div>${thumbs}</div>`;
     next.disabled = false; next.innerHTML = `${icon('pen')} Recommencer`;
     next.onclick = () => { enroll.essais = [null, null, null]; enroll.result = null; enrollGo(1); };
     $('#enrollPrev').classList.add('hidden');
@@ -1329,9 +1319,8 @@ async function enrollVerify() {
   loadMySig(u.id);
   audit(`Signature de référence enregistrée (essai ${r.reference + 1}, score ${pct(r.minimum)}, chiffrée AES-256-GCM)`, u.id);
   $('#enrollStepper').innerHTML = ENROLL_STEPS.map(l => `<li class="done"><span class="dot">${icon('check')}</span><span class="lbl">${l}</span></li>`).join('');
-  body.innerHTML = `<div class="enroll-result"><div class="alert alert-success">${icon('check')}<div><b>Signature validée et enregistrée</b><p>Vos trois essais se ressemblent à ${pct(r.minimum)} au moins (seuil ${pct(SIG_SEUIL)}). L'essai ${r.reference + 1}, le plus représentatif, devient votre signature de référence.</p></div></div>
-    <div class="ref-preview"><div class="sign-box"><img src="${png}" alt="Signature de référence"></div><div class="ref-meta"><b>${icon('lock')} Signature de référence (essai ${r.reference + 1})</b><span>Stockée chiffrée (AES-256-GCM) et liée à votre identifiant</span><span>Image PNG transparente + ${traits.length} traits vectoriels</span><span>Empreinte <code>${u.sigRef ? u.sigRef.empreinte.slice(0, 16) + '…' : '—'}</code></span></div></div>
-    ${rows}</div>`;
+  body.innerHTML = `<div class="enroll-result"><div class="alert alert-success">${icon('check')}<div><b>Signature enregistrée</b><p>Elle sera apposée automatiquement chaque fois que vous validerez une fiche.</p></div></div>
+    <div class="ref-preview"><div class="sign-box"><img src="${png}" alt="Votre signature"></div></div></div>`;
   next.disabled = false; next.innerHTML = `Accéder à l'application ${icon('arrow', 'i-arrow')}`;
   next.onclick = () => enterApp(u);
 }
@@ -1528,10 +1517,10 @@ function demandeTable(list, empty = 'Aucune demande.') {
    ========================================================= */
 /* Comparaison de signatures manuscrites (traits = [[{x, y}, …], …]) */
 const SIG_SEUIL = 0.80;          // score minimal entre chaque paire d'essais
-const SIG_MIN_TRAITS = 2;        // nombre minimal de traits par essai
+const SIG_MIN_TRAITS = 1;        // un essai non vide suffit : le nombre de traits ne compte pas
 const SIG_MIN_LARGEUR = 100;     // taille minimale du tracé (px CSS)
 const SIG_MIN_HAUTEUR = 30;
-const SIG_POIDS = { forme: 0.30, trace: 0.45, proportions: 0.15, traits: 0.10 };
+const SIG_POIDS = { forme: 0.35, trace: 0.50, proportions: 0.15, traits: 0 };
 
 const sigTraits = strokes => strokes.filter(s => s.length >= 2);
 function sigBox(strokes) {
@@ -1546,7 +1535,7 @@ function sigCheck(strokes) {
   if (!t.length) return 'Signature vide : tracez votre signature.';
   if (t.length < SIG_MIN_TRAITS) return `Signature trop simple : au moins ${SIG_MIN_TRAITS} traits sont attendus.`;
   const b = sigBox(t);
-  if (b.w < SIG_MIN_LARGEUR || b.h < SIG_MIN_HAUTEUR) return 'Signature trop petite : utilisez davantage l’espace de tracé.';
+  if (b.w < SIG_MIN_LARGEUR || b.h < SIG_MIN_HAUTEUR) return 'Signature trop petite : signez plus grand.';
   return '';
 }
 // Normalisation : la boîte englobante est centrée et ramenée à 1 sur son plus grand côté
@@ -1591,7 +1580,7 @@ function sigTrace(pa, pb) {
   D[0][0] = 0;
   for (let i = 1; i <= n; i++) for (let j = Math.max(1, i - w); j <= Math.min(n, i + w); j++)
     D[i][j] = Math.hypot(pa[i - 1].x - pb[j - 1].x, pa[i - 1].y - pb[j - 1].y) + Math.min(D[i - 1][j], D[i][j - 1], D[i - 1][j - 1]);
-  const dtw = Math.max(0, 1 - D[n][n] / n / 0.18);
+  const dtw = Math.max(0, 1 - D[n][n] / n / 0.22);
   const hist = p => { const h = new Array(8).fill(0); for (let i = 1; i < p.length; i++) { const a = Math.atan2(p[i].y - p[i - 1].y, p[i].x - p[i - 1].x); h[(Math.round(a / (Math.PI / 4)) + 8) % 8]++; } const s = h.reduce((x, y) => x + y, 0) || 1; return h.map(v => v / s); };
   const ha = hist(pa), hb = hist(pb), dir = ha.reduce((s, v, i) => s + Math.min(v, hb[i]), 0);
   return 0.7 * dtw + 0.3 * dir;
@@ -1778,9 +1767,9 @@ function lockLine(d, level) {
   const sig = sigOf(d, level);
   if (!sig?.hash) return '';
   const ok = verify(d, level), v = versionOf(d, level);
-  return `<div class="lock-line ${ok ? '' : 'bad'}" title="Empreinte SHA-256 : ${sig.hash}">${icon('lock')}<span>Signé électroniquement et verrouillé${v > 1 ? ` · version ${v}` : ''} · empreinte <code>${sig.hash.slice(0, 8)}…${sig.hash.slice(-4)}</code> · ${ok ? 'intégrité vérifiée' : 'modifié après signature !'}</span></div>`;
+  return `<div class="lock-line ${ok ? '' : 'bad'}" title="Empreinte SHA-256 : ${sig.hash}${v > 1 ? ` · version ${v}` : ''}">${icon('lock')}<span>${ok ? 'Signé et verrouillé' : 'Modifié après signature !'}</span></div>`;
 }
-const certifyHtml = () => `<p class="hint" style="margin:0">${icon('lock')} En validant, vous certifiez l'exactitude de ce formulaire : votre signature enregistrée est apposée automatiquement et le formulaire est verrouillé.</p>`;
+const certifyHtml = () => '';
 const checkCertify = () => true;
 
 function signatureBlock(sig, waitingFor, d, level) {
@@ -1793,7 +1782,6 @@ function signatureBlock(sig, waitingFor, d, level) {
 function n1FormHtml(d) {
   return `<div class="level-form" id="n1Form">
     <div class="sign-box n1-slot">${icon('pen')}&nbsp;Votre signature enregistrée sera apposée ici</div>
-    <p class="hint" style="margin:0">${icon('lock')} Toutes les informations de la FED sont reprises automatiquement et en lecture seule. Validez pour apposer votre signature, ou rejetez avec un motif.</p>
     <div class="n1-actions"><button class="btn btn-ghost" id="n1Rejeter" onclick="openRejetN1('${d.ref}')">${icon('x')} Rejeter</button><button class="btn btn-success" id="n1Valider" onclick="submitN1('${d.ref}', true)">${icon('check')} Valider</button></div>
   </div>`;
 }
@@ -1869,7 +1857,6 @@ function cfoSection(d) {
   return `${head}<div class="fiche-grid" id="cfoForm">${ident}
       <div class="fiche-cell full"><label for="cfoPf">Proforma retenue *</label>
         <select class="input" id="cfoPf" onchange="cfoPickProforma(this)"><option value="">Choisir parmi les proformas du RAF/HF…</option>${options}</select>
-        ${moinsDisant ? `<p class="hint" style="margin:4px 0 0">${icon('file')} Repris automatiquement : proforma la moins-disante du RAF/HF, montant en chiffres et en lettres. Modifiable.</p>` : ''}
         <div class="field-error" id="eCfoPf"></div></div>
       <div class="fiche-cell full"><label for="cfoMontant">Montant en chiffre (FCFA) *</label>
         <input class="input" id="cfoMontant" inputmode="numeric" placeholder="0" value="${moinsDisant ? fmtNum(moinsDisant.montant) : ''}" oninput="this.value=this.value.replace(/[^0-9]/g,'').replace(/\\B(?=(\\d{3})+(?!\\d))/g,' ');cfoMontantChange()">
@@ -1912,7 +1899,6 @@ function rafSection(d) {
   const pre = d.raf || { tranche: trancheOf(d.montant), reserve: '', proformas: [
     { fournisseur: '', ref: d.pieces?.[0] ? d.pieces[0].replace(/\.pdf$/i, '') : '', montant: d.montant }, { fournisseur: '', ref: '', montant: 0 }, { fournisseur: '', ref: '', montant: 0 }] };
   return `${head}<div class="fiche-grid" id="rafForm">${ident}
-      ${d.raf ? '' : `<div class="fiche-cell full"><p class="hint" style="margin:0">${icon('file')} Pré-rempli automatiquement à partir de la FED (montant estimé ${fcfa(d.montant)}${d.pieces?.length ? ', pro-forma jointe' : ''}). Vérifiez et complétez.</p></div>`}
       <div class="fiche-cell full"><span>Montant achat *</span>
         <div class="tranches">${TRANCHES.map((l, i) => `<label class="tranche"><input type="radio" name="tranche" value="${i}" ${pre.tranche === i ? 'checked' : ''}>${l}</label>`).join('')}</div>
         <div class="field-error" id="eTranche"></div></div>
@@ -2124,7 +2110,7 @@ function signaturesCard(d) {
   const current = Object.keys(LEVELS).filter(l => sigOf(d, l)?.hash);
   const arch = d.archives || [];
   if (!current.length && !arch.length) return '';
-  const item = (label, sig, ok, extra) => `<div class="sig-item ${ok ? '' : 'bad'}">${icon('lock')}<div><b>${label}</b><small>${esc(nom(sig.by))} · ${fDateTime(sig.at)} · <code title="${sig.hash}">${sig.hash.slice(0, 10)}…</code></small>${extra || ''}</div></div>`;
+  const item = (label, sig, ok, extra) => `<div class="sig-item ${ok ? '' : 'bad'}">${icon('lock')}<div><b>${label}</b><small title="${sig.hash}">${esc(nom(sig.by))} · ${fDateTime(sig.at)}</small>${extra || ''}</div></div>`;
   return `<div class="card">
     <div class="card-head"><h2>Formulaires signés</h2><span class="badge b-success">${current.length} verrouillé${current.length > 1 ? 's' : ''}</span></div>
     <div class="sig-list">${current.map(l => item(`${LEVELS[l]}${versionOf(d, l) > 1 ? ` · v${versionOf(d, l)}` : ''}`, sigOf(d, l), verify(d, l), verify(d, l) ? '' : '<small style="color:var(--danger)">Modifié après signature</small>')).join('')}</div>
