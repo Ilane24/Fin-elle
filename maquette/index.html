@@ -1219,19 +1219,20 @@ $('#registerForm').addEventListener('submit', e => {
 /* Étape obligatoire : enregistrement de la signature, pas à pas
    Consignes → essai 1 → essai 2 → essai 3 → vérification */
 let enrollUser = null, enroll = null;
-const ENROLL_STEPS = ['Consignes', 'Essai 1', 'Essai 2', 'Essai 3', 'Vérification'];
+const ENROLL_STEPS = ['Consignes', 'Essai 1', 'Essai 2', 'Essai 3', 'Enregistrement'];
 function showEnroll(u) {
   enrollUser = u;
   enroll = { step: 0, essais: [null, null, null], result: null };
   $$('#login .login-card').forEach(c => c.classList.toggle('hidden', c.id !== 'enrollCard'));
   $('#app').classList.add('hidden'); $('#login').classList.remove('hidden');
   $('#enrollWho').textContent = u.nom;
+  $('#enrollLater').classList.remove('hidden');
   enrollGo(0);
 }
 function enrollGo(step) {
   enroll.step = step;
-  const done = i => i === 0 ? step > 0 : i <= 3 ? !!enroll.essais[i - 1] && step !== i : !!enroll.result?.valide;
-  $('#enrollStepper').innerHTML = ENROLL_STEPS.map((l, i) => `<li class="${i === step ? 'current' : done(i) && i < 4 ? 'done' : ''}" ${done(i) && i < 4 && i !== step && !enroll.result?.valide ? `onclick="enrollGo(${i})" title="Revenir à : ${l}"` : ''}>
+  const done = i => i === 0 ? step > 0 : i <= 3 ? !!enroll.essais[i - 1] && step !== i : !!enroll.result;
+  $('#enrollStepper').innerHTML = ENROLL_STEPS.map((l, i) => `<li class="${i === step ? 'current' : done(i) && i < 4 ? 'done' : ''}" ${done(i) && i < 4 && i !== step && !enroll.result ? `onclick="enrollGo(${i})" title="Revenir à : ${l}"` : ''}>
     <span class="dot">${done(i) && i !== step ? icon('check') : i + 1}</span><span class="lbl">${l}</span></li>`).join('');
   const body = $('#enrollBody'), prev = $('#enrollPrev'), next = $('#enrollNext');
   body.style.animation = 'none'; void body.offsetWidth; body.style.animation = '';
@@ -1243,7 +1244,7 @@ function enrollGo(step) {
     const tips = [
       ['pen', 'Signez comme sur papier', 'À la souris ou au stylet.'],
       ['file', 'Signez en grand', 'Utilisez bien l\u2019espace de signature.'],
-      ['check', 'Trois fois la même signature', 'De la même manière à chaque essai.'],
+      ['check', 'Signez trois fois', 'Nous gardons automatiquement la plus représentative.'],
     ];
     body.innerHTML = `<div class="enroll-intro">${tips.map(([ic, t, d]) => `<div class="tip"><span class="tip-ic">${icon(ic)}</span><div><b>${t}</b><span>${d}</span></div></div>`).join('')}</div>
 `;
@@ -1279,12 +1280,12 @@ function enrollEssai(n) {
     old.forEach(st => { ctx.beginPath(); st.forEach((p, i) => i ? ctx.lineTo(p.x, p.y) : ctx.moveTo(p.x, p.y)); ctx.stroke(); });
     pad.strokes = old.map(st => st.slice()); pad.isEmpty = false; pad.classList.add('signed');
   }
-  // Le bouton s'active dès que l'utilisateur a signé ; un essai trop petit est signalé au clic
+  // Le bouton s'active dès que l'utilisateur a signé
   const refresh = () => { next.disabled = !sigTraits(pad.strokes).length; $('#essaiErr').textContent = ''; };
   pad.addEventListener('strokeend', refresh);
   pad.addEventListener('cleared', refresh);
   refresh();
-  next.innerHTML = n < 3 ? `Valider l'essai ${n} ${icon('arrow', 'i-arrow')}` : `Vérifier mes signatures ${icon('arrow', 'i-arrow')}`;
+  next.innerHTML = n < 3 ? `Valider l'essai ${n} ${icon('arrow', 'i-arrow')}` : `Enregistrer ma signature ${icon('arrow', 'i-arrow')}`;
   next.onclick = () => {
     const err = sigCheck(pad.strokes);
     if (err) { $('#essaiErr').textContent = err; pad.classList.add('invalid'); return; }
@@ -1297,30 +1298,21 @@ function enrollEssai(n) {
 }
 async function enrollVerify() {
   const u = enrollUser, body = $('#enrollBody'), next = $('#enrollNext');
-  next.disabled = true; next.innerHTML = `Vérification… ${icon('clock')}`;
-  body.innerHTML = `<div class="enroll-wait"><div class="spinner"></div><span>Comparaison de vos trois essais…</span></div>`;
+  next.disabled = true; next.innerHTML = `Enregistrement… ${icon('clock')}`;
+  body.innerHTML = `<div class="enroll-wait"><div class="spinner"></div><span>Choix de votre signature la plus représentative…</span></div>`;
   await new Promise(res => setTimeout(res, 600));
+  // L'essai qui ressemble le plus aux deux autres devient la signature de référence
   const r = enroll.result = sigCompare(enroll.essais);
-  const pct = v => Math.round(v * 100) + ' %';
-  const thumbs = `<div class="thumbs" style="grid-template-columns:repeat(3,minmax(0,1fr))">${enroll.essais.map((e, i) => `<div class="thumb ${i === r.reference && r.valide ? 'now' : ''}"><div class="row"><b>Essai ${i + 1}</b></div><div class="img"><img src="${sigPng(e)}" alt="Essai ${i + 1}"></div></div>`).join('')}</div>`;
-  if (!r.valide) {
-    audit(`Enregistrement de la signature refusé (meilleure ressemblance ${pct(r.score)} < ${pct(SIG_SEUIL)})`, u.id);
-    $('#enrollStepper li:last-child')?.classList.add('current');
-    body.innerHTML = `<div class="enroll-result"><div class="alert alert-danger">${icon('x')}<div><b>Vos signatures sont trop différentes</b><p>Au moins deux essais doivent se ressembler. Recommencez en signant de la même manière.</p></div></div>${thumbs}</div>`;
-    next.disabled = false; next.innerHTML = `${icon('pen')} Recommencer`;
-    next.onclick = () => { enroll.essais = [null, null, null]; enroll.result = null; enrollGo(1); };
-    $('#enrollPrev').classList.add('hidden');
-    return;
-  }
   const traits = enroll.essais[r.reference];
   const png = sigPng(traits);
-  if (sigKey) u.sigRef = await sigEncrypt(u.id, { png, traits, source: 'enrôlement', score: r.minimum, essai: r.reference + 1 });
+  if (sigKey) u.sigRef = await sigEncrypt(u.id, { png, traits, source: 'enrôlement', essai: r.reference + 1 });
   delete u.sigSeed;
   loadMySig(u.id);
-  audit(`Signature de référence enregistrée (essai ${r.reference + 1}, essais concordants ${r.retenus.map(k => k + 1).sort().join(', ')}, ressemblance ${pct(r.score)}, chiffrée AES-256-GCM)`, u.id);
+  audit(`Signature de référence enregistrée (essai ${r.reference + 1} sur 3, le plus proche des deux autres, chiffrée AES-256-GCM)`, u.id);
   $('#enrollStepper').innerHTML = ENROLL_STEPS.map(l => `<li class="done"><span class="dot">${icon('check')}</span><span class="lbl">${l}</span></li>`).join('');
-  body.innerHTML = `<div class="enroll-result"><div class="alert alert-success">${icon('check')}<div><b>Signature enregistrée</b><p>Elle sera apposée automatiquement chaque fois que vous validerez une fiche.</p></div></div>
-    <div class="ref-preview"><div class="sign-box"><img src="${png}" alt="Votre signature"></div></div></div>`;
+  $('#enrollPrev').classList.add('hidden'); $('#enrollLater').classList.add('hidden');
+  body.innerHTML = `<div class="enroll-result"><div class="alert alert-success">${icon('check')}<div><b>Signature enregistrée</b><p>Nous avons gardé votre essai ${r.reference + 1}, le plus représentatif. Il sera apposé automatiquement chaque fois que vous validerez une fiche.</p></div></div>
+    <div class="thumbs" style="grid-template-columns:repeat(3,minmax(0,1fr))">${enroll.essais.map((e, i) => `<div class="thumb ${i === r.reference ? 'now' : ''}"><div class="row"><b>Essai ${i + 1}</b><span>${i === r.reference ? 'Retenu' : ''}</span></div><div class="img"><img src="${sigPng(e)}" alt="Essai ${i + 1}"></div></div>`).join('')}</div></div>`;
   next.disabled = false; next.innerHTML = `Accéder à l'application ${icon('arrow', 'i-arrow')}`;
   next.onclick = () => enterApp(u);
 }
@@ -1516,10 +1508,6 @@ function demandeTable(list, empty = 'Aucune demande.') {
    automatiquement lorsque le N+1 valide une FED.
    ========================================================= */
 /* Comparaison de signatures manuscrites (traits = [[{x, y}, …], …]) */
-const SIG_SEUIL = 0.80;          // score minimal entre chaque paire d'essais
-const SIG_MIN_TRAITS = 1;        // un essai non vide suffit : le nombre de traits ne compte pas
-const SIG_MIN_LARGEUR = 100;     // taille minimale du tracé (px CSS)
-const SIG_MIN_HAUTEUR = 30;
 const SIG_POIDS = { forme: 0.35, trace: 0.50, proportions: 0.15, traits: 0 };
 
 const sigTraits = strokes => strokes.filter(s => s.length >= 2);
@@ -1529,14 +1517,9 @@ function sigBox(strokes) {
   const x0 = Math.min(...xs), y0 = Math.min(...ys), x1 = Math.max(...xs), y1 = Math.max(...ys);
   return { x0, y0, w: x1 - x0, h: y1 - y0 };
 }
-// Contrôle d'un essai : non vide, nombre minimal de traits, taille suffisante
+// Contrôle d'un essai : il suffit qu'il ne soit pas vide
 function sigCheck(strokes) {
-  const t = sigTraits(strokes);
-  if (!t.length) return 'Signature vide : tracez votre signature.';
-  if (t.length < SIG_MIN_TRAITS) return `Signature trop simple : au moins ${SIG_MIN_TRAITS} traits sont attendus.`;
-  const b = sigBox(t);
-  if (b.w < SIG_MIN_LARGEUR || b.h < SIG_MIN_HAUTEUR) return 'Signature trop petite : signez plus grand.';
-  return '';
+  return sigTraits(strokes).length ? '' : 'Signature vide : signez dans le cadre.';
 }
 // Normalisation : la boîte englobante est centrée et ramenée à 1 sur son plus grand côté
 function sigNormalize(strokes) {
@@ -1597,15 +1580,11 @@ function sigScore(sa, sb) {
   const score = Object.keys(SIG_POIDS).reduce((s, k) => s + SIG_POIDS[k] * detail[k], 0);
   return { score, detail };
 }
-// Compare les trois essais : validés dès que deux essais au moins se ressemblent (meilleure paire au-dessus du seuil).
-// Référence : dans la paire la plus ressemblante, l'essai le plus proche de l'ensemble des essais.
-function sigCompare(essais, seuil = SIG_SEUIL) {
+// Compare les trois essais et retient celui qui ressemble le plus aux deux autres
+function sigCompare(essais) {
   const paires = [[0, 1], [0, 2], [1, 2]].map(([i, j]) => ({ i, j, ...sigScore(essais[i], essais[j]) }));
   const proximite = [0, 1, 2].map(k => paires.filter(p => p.i === k || p.j === k).reduce((s, p) => s + p.score, 0) / 2);
-  const meilleure = paires.reduce((a, b) => b.score > a.score ? b : a);
-  const reference = proximite[meilleure.i] >= proximite[meilleure.j] ? meilleure.i : meilleure.j;
-  const retenus = [meilleure.i, meilleure.j].concat([0, 1, 2].filter(k => k !== meilleure.i && k !== meilleure.j && paires.some(p => (p.i === k || p.j === k) && p.score >= seuil)));
-  return { valide: meilleure.score >= seuil, score: meilleure.score, minimum: Math.min(...paires.map(p => p.score)), paires, proximite, reference, retenus };
+  return { paires, proximite, reference: proximite.indexOf(Math.max(...proximite)) };
 }
 
 // Rendu d'un tracé en PNG transparent, recadré sur la signature
