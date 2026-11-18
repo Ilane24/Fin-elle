@@ -551,6 +551,11 @@ label.tranche:hover { border-color: var(--accent); color: var(--accent); }
 .tranche:has(input:checked), .tranche.on { border-color: var(--accent); background: var(--accent-soft); color: var(--accent); font-weight: 600; }
 .tranche .i { width: 14px; height: 14px; stroke-width: 2.6; }
 .pf-row { display: grid; grid-template-columns: 1.3fr 1fr 1fr; gap: 12px; }
+.pf-row.pf4 { grid-template-columns: 1.3fr 1fr 1fr 96px; align-items: end; }
+.pf-pick { display: flex; align-items: center; gap: 6px; height: 38px; font-size: 12.5px; font-weight: 600; color: var(--text-muted); cursor: pointer; }
+.pf-pick input { accent-color: var(--accent); width: 16px; height: 16px; }
+.pf-retenue { color: var(--accent); font-size: 11.5px; font-weight: 700; }
+.input[readonly] { background: var(--surface); color: var(--text); cursor: default; }
 .pf-row > div { display: grid; gap: 4px; min-width: 0; }
 .pf-row span, .pf-row label, .fiche-cell > label { font-size: 12px; color: var(--text-muted); font-weight: 600; }
 .pf-row b { font-weight: 600; overflow-wrap: anywhere; }
@@ -1710,7 +1715,7 @@ function sigOf(d, level) {
 // Contenu scellé par niveau : ce que le signataire a rempli dans son formulaire
 function levelData(d, level, sig = sigOf(d, level)) {
   switch (level) {
-    case 'demandeur': return pick(d, ['type', 'objet', 'montant', 'proforma', 'description', 'pieces']);
+    case 'demandeur': return pick(d, ['type', 'objet', 'montant', 'proforma', 'description', 'pieces', 'paiement', 'proformas', 'pfPropose', 'tranche']);
     case 'raf': return d.raf;
     case 'cfo': return d.cfo;
     case 'compta': return d.compta;
@@ -1740,7 +1745,21 @@ function archive(d, level, motif) {
   d.archives.push({ level, version, motif, at: nowIso(), sig: { ...sig }, data: JSON.parse(JSON.stringify(levelData(d, level, sig) ?? null)) });
 }
 const versionOf = (d, level) => sigOf(d, level)?.v || (d.archives || []).filter(a => a.level === level).length + 1;
+// Informations de la FED saisies par le demandeur : pro-formas 1 à 3, pro-forma retenue, tranche, mode de paiement
+const FOURNISSEURS_DEMO = ['Bureau Vallée CI', 'Librairie de France', 'SOTRA Équipements', 'Ivoire Bureautique', 'Prosuma Pro'];
+const pfVide = () => ({ fournisseur: '', ref: '', montant: 0 });
+function completerFed(d) {
+  if (!d.proformas) {
+    const k = [...d.ref].reduce((a, c) => a + c.charCodeAt(0), 0) % FOURNISSEURS_DEMO.length;
+    d.proformas = d.raf?.proformas ? d.raf.proformas.map(x => ({ ...x }))
+      : [{ fournisseur: FOURNISSEURS_DEMO[k], ref: d.pieces?.[0] ? d.pieces[0].replace(/\.pdf$/i, '') : '', montant: d.montant }, pfVide(), pfVide()];
+  }
+  if (d.pfPropose == null) d.pfPropose = d.cfo?.proforma ?? 0;
+  if (d.tranche == null) d.tranche = d.raf?.tranche ?? trancheOf(d.montant);
+  if (!d.paiement) d.paiement = 'Chèque';
+}
 function sealAll() {
+  DEMANDES.forEach(completerFed);
   DEMANDES.forEach(d => Object.keys(LEVELS).forEach(l => { const sg = sigOf(d, l); if (sg && !sg.hash) seal(d, l, false); }));
 }
 // Ligne « verrouillé » affichée sous chaque formulaire signé
@@ -1797,7 +1816,8 @@ function ficheView(d) {
         <div class="fiche-cell"><span>Fonction</span><b>${esc(u.fonction)}</b></div>
         <div class="fiche-cell"><span>Référence N°</span><b>${d.ref}</b></div>
         <div class="fiche-cell"><span>Pro-forma</span><b>${d.proforma ? 'Oui' : 'Non'}${d.pieces.length ? ` · <a href="#/demande/${d.ref}" onclick="event.preventDefault();toast('Aperçu de la pièce (démo)')">${esc(d.pieces[0])}</a>` : ''}</b></div>
-        <div class="fiche-cell"><span>Montant estimé</span><b>${fcfa(d.montant)}</b></div>
+        <div class="fiche-cell"><span>Montant (pro-forma retenue)</span><b>${fcfa(d.montant)}</b></div>
+        <div class="fiche-cell full"><span>Mode de paiement</span><b>${esc(d.paiement || '—')}</b></div>
         ${d.description ? `<div class="fiche-cell full"><span>Précisions</span><b style="font-weight:500">${esc(d.description)}</b></div>` : ''}
       </div>
       <div class="fiche-signs">
@@ -1833,7 +1853,7 @@ function cfoSection(d) {
     <div class="fiche-signs single"><div class="fiche-sign"><h3>Signature</h3>${signatureBlock(d.sigCfo, '', d, 'cfo')}</div></div>`;
   }
   const valides = d.raf.proformas.map((p, i) => ({ ...p, i })).filter(p => p.fournisseur && p.montant);
-  const moinsDisant = valides.length ? valides.reduce((a, b) => b.montant < a.montant ? b : a) : null;
+  const moinsDisant = valides.find(p => p.i === d.pfPropose) || (valides.length ? valides.reduce((a, b) => b.montant < a.montant ? b : a) : null);
   const options = valides.map(p => `<option value="${p.i}" data-montant="${p.montant}" ${p === moinsDisant ? 'selected' : ''}>${esc(pfLabel(p.i))} – ${fcfa(p.montant)}</option>`).join('');
   return `${head}<div class="fiche-grid" id="cfoForm">${ident}
       <div class="fiche-cell full"><label for="cfoPf">Proforma retenue *</label>
@@ -1861,41 +1881,27 @@ function rafSection(d) {
   const editable = session.id === RAF_ID && d.statut === 'raf';
   if (!editable && !d.raf && d.statut !== 'raf') return '';
   const head = `<div class="fiche-section" style="border-top:2px solid var(--text)">Validation (1) de la demande par RAF/HF</div>`;
-  const ident = `
+  // Tranche et pro-formas : saisies par le demandeur, reprises en lecture seule
+  const r = d.raf || { tranche: d.tranche, proformas: d.proformas, reserve: '', date: null };
+  const data = `
     <div class="fiche-cell"><span>Fonction</span><b>${esc(raf.fonction.toUpperCase())}</b></div>
-    <div class="fiche-cell"><span>Nom-Prénom</span><b>${esc(raf.nom.toUpperCase())}</b></div>`;
-  if (!editable && !d.raf) return `${head}<div class="fiche-grid">${ident}</div>
-    <div class="fiche-signs single"><div class="fiche-sign"><h3>Signature</h3>${signatureBlock(null, `${icon('clock')}&nbsp;En attente de ${esc(raf.nom)} (RAF/HF)`)}</div></div>`;
-  if (!editable) {
-    const r = d.raf;
-    return `${head}<div class="fiche-grid">${ident}
-      <div class="fiche-cell full"><span>Montant achat</span><div class="tranches">${TRANCHES.map((t, i) => `<span class="tranche ${i === r.tranche ? 'on' : ''}">${i === r.tranche ? icon('check') : ''}${t}</span>`).join('')}</div></div>
-      ${r.proformas.map((p, i) => `<div class="fiche-cell full"><div class="pf-row"><div><span>Proforma ${i + 1}</span><b>${esc(p.fournisseur) || '—'}</b></div><div><span>Réf N°</span><b>${esc(p.ref) || '—'}</b></div><div><span>Montant</span><b>${p.montant ? fcfa(p.montant) : '— FCFA'}</b></div></div></div>`).join('')}
-      <div class="fiche-cell full"><span>Réserve</span><b style="font-weight:500">${esc(r.reserve) || '—'}</b></div>
-      <div class="fiche-cell full"><span>Date</span><b>${fDate(r.date)}</b></div>
-    </div>
-    <div class="fiche-signs single"><div class="fiche-sign"><h3>Signature</h3>${signatureBlock(d.sigRaf, '', d, 'raf')}</div></div>`;
-  }
-  // Reprise automatique de la FED : tranche d'après le montant estimé, proforma 1 d'après la pièce jointe et le montant
-  const pre = d.raf || { tranche: trancheOf(d.montant), reserve: '', proformas: [
-    { fournisseur: '', ref: d.pieces?.[0] ? d.pieces[0].replace(/\.pdf$/i, '') : '', montant: d.montant }, { fournisseur: '', ref: '', montant: 0 }, { fournisseur: '', ref: '', montant: 0 }] };
-  return `${head}<div class="fiche-grid" id="rafForm">${ident}
-      <div class="fiche-cell full"><span>Montant achat *</span>
-        <div class="tranches">${TRANCHES.map((l, i) => `<label class="tranche"><input type="radio" name="tranche" value="${i}" ${pre.tranche === i ? 'checked' : ''}>${l}</label>`).join('')}</div>
-        <div class="field-error" id="eTranche"></div></div>
-      ${[0, 1, 2].map(i => `<div class="fiche-cell full"><div class="pf-row">
-        <div><label for="pfF${i}">Proforma ${i + 1}${i === 0 ? ' *' : ''}</label><input class="input" id="pfF${i}" placeholder="Fournisseur" value="${esc(pre.proformas[i].fournisseur)}"></div>
-        <div><label for="pfR${i}">Réf N°</label><input class="input" id="pfR${i}" placeholder="Ex. PF-2026-001" value="${esc(pre.proformas[i].ref)}"></div>
-        <div><label for="pfM${i}">Montant (FCFA)</label><input class="input" id="pfM${i}" inputmode="numeric" placeholder="0" value="${pre.proformas[i].montant ? fmtNum(pre.proformas[i].montant) : ''}" oninput="this.value=this.value.replace(/[^0-9]/g,'').replace(/\\B(?=(\\d{3})+(?!\\d))/g,' ')"></div>
-      </div>${i === 0 ? '<div class="field-error" id="ePf"></div>' : ''}</div>`).join('')}
-      <div class="fiche-cell full"><label for="rafReserve">Réserve</label><textarea class="input" id="rafReserve" rows="2" placeholder="Observations éventuelles (facultatif)">${esc(pre.reserve)}</textarea></div>
+    <div class="fiche-cell"><span>Nom-Prénom</span><b>${esc(raf.nom.toUpperCase())}</b></div>
+    <div class="fiche-cell full"><span>Montant achat</span><div class="tranches">${TRANCHES.map((t, i) => `<span class="tranche ${i === r.tranche ? 'on' : ''}">${i === r.tranche ? icon('check') : ''}${t}</span>`).join('')}</div></div>
+    ${r.proformas.map((p, i) => `<div class="fiche-cell full"><div class="pf-row"><div><span>Proforma ${i + 1}${i === d.pfPropose ? ' <i class="pf-retenue">· retenue par le demandeur</i>' : ''}</span><b>${esc(p.fournisseur) || '—'}</b></div><div><span>Réf N°</span><b>${esc(p.ref) || '—'}</b></div><div><span>Montant</span><b>${p.montant ? fcfa(p.montant) : '— FCFA'}</b></div></div></div>`).join('')}`;
+  if (editable) return `${head}<div class="fiche-grid" id="rafForm">${data}
+      <div class="fiche-cell full"><label for="rafReserve">Réserve</label><textarea class="input" id="rafReserve" rows="2" placeholder="Observations éventuelles (facultatif)"></textarea></div>
       <div class="fiche-cell full"><span>Date</span><b>${fDate(new Date())}</b></div>
     </div>
-    <div class="fiche-signs single"><div class="fiche-sign"><h3>Signature *</h3>${padHtml('padRaf', 'Signez ici pour valider')}<div class="field-error" id="eSigR"></div>${certifyHtml('rafCert')}
+    <div class="fiche-signs single"><div class="fiche-sign"><h3>Signature *</h3>${padHtml('padRaf')}<div class="field-error" id="eSigR"></div>
       <div class="form-actions" style="margin-top:6px">
         <button class="btn btn-ghost" onclick="openReturn('${d.ref}')">${icon('arrow', 'i-back')} Retourner au N+1</button>
         <button class="btn btn-success" onclick="submitRaf('${d.ref}')">${icon('check')} Valider et signer</button>
       </div></div></div>`;
+  return `${head}<div class="fiche-grid">${data}
+      <div class="fiche-cell full"><span>Réserve</span><b style="font-weight:500">${esc(r.reserve) || '—'}</b></div>
+      <div class="fiche-cell full"><span>Date</span><b>${r.date ? fDate(r.date) : '—'}</b></div>
+    </div>
+    <div class="fiche-signs single"><div class="fiche-sign"><h3>Signature</h3>${d.raf ? signatureBlock(d.sigRaf, '', d, 'raf') : signatureBlock(null, `${icon('clock')}&nbsp;En attente de ${esc(raf.nom)} (RAF/HF)`)}</div></div>`;
 }
 
 /* =========================================================
@@ -2004,8 +2010,6 @@ function viewDemande(ref) {
     initPad($('#padRaf')).addEventListener('pointerdown', () => { $('#eSigR').textContent = ''; });
     $('#rafForm').addEventListener('input', e => {
       e.target.classList.remove('invalid');
-      if (e.target.name === 'tranche') $('#eTranche').textContent = '';
-      if (/^pf.0$/.test(e.target.id)) $('#ePf').textContent = '';
     });
   };
   const isAchat = can('achats') && achatPending(d) && d.demandeur !== session.id;
@@ -2128,7 +2132,7 @@ function viewNouvelle(ref) {
       if (err) err.textContent = '';
       e.target.classList.remove('invalid');
     });
-    menueMontantChange();
+    fedPfChange();
   };
   return `
     ${pageHead(src ? 'Corriger la demande' : 'Nouvelle demande', !manager ? "Aucun N+1 n'est défini pour votre compte : contactez l'administrateur."
@@ -2154,8 +2158,22 @@ function viewNouvelle(ref) {
           <div class="field-error" id="eProforma"></div>
           <div class="upload ${src?.proforma ? '' : 'hidden'}" id="pfUpload" style="padding:12px" onclick="attachProforma(this, '${draftRef}')">${icon('upload')}<div><b>Joindre la pro-forma</b> · PDF, JPG, PNG</div></div>
         </div>
-        <div class="fiche-cell"><label for="fMontant" style="font-size:12px;color:var(--text-muted);font-weight:600">Montant estimé (FCFA) *</label><input class="input" id="fMontant" inputmode="numeric" value="${src ? nf.format(src.montant).replace(/\s/g, ' ') : ''}" placeholder="Ex. 750 000" oninput="this.value=this.value.replace(/[^0-9]/g,'').replace(/\\B(?=(\\d{3})+(?!\\d))/g,' ');menueMontantChange()"><div class="field-error" id="eMontant"></div></div>
-        <div class="fiche-cell full"><label for="fDesc" style="font-size:12px;color:var(--text-muted);font-weight:600">Précisions (facultatif)</label><textarea class="input" id="fDesc" rows="2" placeholder="Fournisseur pressenti, urgence, lieu…">${esc(src?.description ?? '')}</textarea></div>
+        <div class="fiche-cell"><label for="fMontant" style="font-size:12px;color:var(--text-muted);font-weight:600">Montant (pro-forma retenue)</label><input class="input" id="fMontant" readonly tabindex="-1" value="${src ? nf.format(src.montant).replace(/\s/g, ' ') : ''}" placeholder="Calculé à partir des pro-formas"><div class="field-error" id="eMontant"></div></div>
+        <div class="fiche-cell full"><label for="fDesc" style="font-size:12px;color:var(--text-muted);font-weight:600">Précisions (facultatif)</label><textarea class="input" id="fDesc" rows="2" placeholder="Urgence, lieu de livraison…">${esc(src?.description ?? '')}</textarea></div>
+      </div>
+      <div class="fiche-section">Pro-formas et montant</div>
+      <div class="fiche-grid">
+        <div class="fiche-cell full"><span>Mode de paiement *</span>
+          <div class="radio-row">${['Chèque', 'Virement'].map(m => `<label><input type="radio" name="paiement" value="${m}" ${src?.paiement === m ? 'checked' : ''} onchange="$('#ePaiement').textContent=''"> ${m}</label>`).join('')}</div>
+          <div class="field-error" id="ePaiement"></div></div>
+        ${[0, 1, 2].map(i => { const pf = src?.proformas?.[i] || pfVide(); return `<div class="fiche-cell full"><div class="pf-row pf4">
+          <div><label for="dPfF${i}">Pro-forma ${i + 1}${i === 0 ? ' *' : ''}</label><input class="input" id="dPfF${i}" placeholder="Fournisseur" value="${esc(pf.fournisseur)}" oninput="fedPfChange()"></div>
+          <div><label for="dPfR${i}">Réf N°</label><input class="input" id="dPfR${i}" placeholder="Ex. PF-2026-001" value="${esc(pf.ref)}"></div>
+          <div><label for="dPfM${i}">Montant (FCFA)${i === 0 ? ' *' : ''}</label><input class="input" id="dPfM${i}" inputmode="numeric" placeholder="0" value="${pf.montant ? fmtNum(pf.montant) : ''}" oninput="this.value=this.value.replace(/[^0-9]/g,'').replace(/\\B(?=(\\d{3})+(?!\\d))/g,' ');fedPfChange()"></div>
+          <label class="pf-pick"><input type="radio" name="pfPropose" value="${i}" ${(src?.pfPropose ?? 0) === i ? 'checked' : ''} onchange="this.form.dataset.choix='1';fedPfChange()"> Retenue</label>
+        </div>${i === 0 ? '<div class="field-error" id="ePfDem"></div>' : ''}</div>`; }).join('')}
+        <div class="fiche-cell full"><span>Montant achat</span><div class="tranches" id="fTranche"></div></div>
+        <div class="fiche-cell full"><span>Montant en lettres</span><b id="fLettres">—</b></div>
       </div>
       <div class="fiche-signs">
         <div class="fiche-sign"><h3>Signature Demandeur *</h3>${padHtml('padDemandeur', 'Signez ici')}<div class="field-error" id="eSig"></div>${certifyHtml('demCert')}</div>
@@ -2674,6 +2692,28 @@ function toast(msg) {
   toast.t = setTimeout(() => t.classList.remove('show'), 2600);
 }
 
+// Pro-formas du demandeur : la retenue (choisie, sinon la moins-disante) donne le montant, la tranche et le montant en lettres
+function fedPfLignes() {
+  return [0, 1, 2].map(i => ({ fournisseur: $('#dPfF' + i).value.trim(), ref: $('#dPfR' + i).value.trim(), montant: Number($('#dPfM' + i).value.replace(/\D/g, '')) }));
+}
+function fedPfChange() {
+  const lignes = fedPfLignes(), form = $('#ficheForm');
+  const pleines = lignes.map((l, i) => ({ ...l, i })).filter(l => l.fournisseur && l.montant > 0);
+  let choix = document.querySelector('input[name=pfPropose]:checked');
+  if (form.dataset.choix !== '1' && pleines.length) {
+    const moins = pleines.reduce((a, b) => b.montant < a.montant ? b : a);
+    document.querySelector(`input[name=pfPropose][value="${moins.i}"]`).checked = true;
+    choix = document.querySelector('input[name=pfPropose]:checked');
+  }
+  const ret = choix ? lignes[Number(choix.value)] : null;
+  const m = ret && ret.montant > 0 ? ret.montant : 0;
+  $('#fMontant').value = m ? fmtNum(m) : '';
+  $('#fTranche').innerHTML = TRANCHES.map((t, i) => `<span class="tranche ${m && i === trancheOf(m) ? 'on' : ''}">${m && i === trancheOf(m) ? icon('check') : ''}${t}</span>`).join('');
+  $('#fLettres').textContent = m ? enLettres(m) : '—';
+  if (m) $('#ePfDem').textContent = '';
+  menueMontantChange();
+}
+
 function attachProforma(el, ref) {
   el.dataset.file = `Proforma_${ref}.pdf`;
   el.innerHTML = `${icon('file')}<div><b>Proforma_${ref}.pdf</b> · 312 Ko</div>`;
@@ -2683,7 +2723,11 @@ function attachProforma(el, ref) {
 function submitFiche(resubmitRef) {
   const objet = $('#fObjet').value.trim();
   const pf = document.querySelector('input[name=proforma]:checked');
-  const montant = Number($('#fMontant').value.replace(/\D/g, ''));
+  const proformas = fedPfLignes();
+  const choix = document.querySelector('input[name=pfPropose]:checked');
+  const pfPropose = choix ? Number(choix.value) : 0;
+  const montant = proformas[pfPropose].montant;
+  const paiement = document.querySelector('input[name=paiement]:checked')?.value;
   const sigPad = $('#padDemandeur');
   const type = newType;
   const me0 = userById(session.id);
@@ -2694,7 +2738,11 @@ function submitFiche(resubmitRef) {
   const setErr = (id, msg, el) => { $(id).textContent = msg; if (el) el.classList.toggle('invalid', !!msg); if (msg) ok = false; };
   setErr('#eObjet', objet.length < 5 ? "Décrivez l'objet de la dépense (5 caractères minimum)." : '', $('#fObjet'));
   setErr('#eProforma', pf ? '' : 'Indiquez si une pro-forma est jointe.');
-  setErr('#eMontant', montant > 0 ? '' : 'Saisissez le montant estimé en FCFA.', $('#fMontant'));
+  const incomplete = proformas.findIndex(l => (l.fournisseur || l.ref || l.montant) && !(l.fournisseur && l.montant > 0));
+  setErr('#ePfDem', !(proformas[0].fournisseur && proformas[0].montant > 0) ? 'Renseignez au moins la pro-forma 1 (fournisseur et montant).'
+    : incomplete >= 0 ? `Complétez la pro-forma ${incomplete + 1} (fournisseur et montant) ou videz-la.`
+    : !(proformas[pfPropose].fournisseur && montant > 0) ? 'La pro-forma retenue doit être renseignée.' : '');
+  setErr('#ePaiement', paiement ? '' : 'Choisissez le mode de paiement.');
   setErr('#eSig', sigPad.isEmpty ? 'Votre signature est obligatoire pour transmettre la fiche.' : '');
   if (sigPad.isEmpty) sigPad.classList.add('invalid');
   if (!checkCertify('demCert')) ok = false;
@@ -2710,12 +2758,12 @@ function submitFiche(resubmitRef) {
     // Les formulaires signés de la version rejetée sont archivés (verrouillés) avant la nouvelle version
     const motif = `rejet par ${nom(d.rejetPar || d.n1)} le ${fDateTime(now)}`;
     Object.keys(LEVELS).forEach(l => archive(d, l, motif));
-    Object.assign(d, { type, bcDoc: null, achat: null, sigs: {}, compta: null, rejetPar: null, rejetEtape: null, compte: me.compteMD, objet, proforma: pf.value === 'oui', montant, description: $('#fDesc').value.trim(), date: now, statut: 'attente', sigDemandeur: sig, sigManager: null, sigRaf: null, raf: null, retourRaf: null, sigCfo: null, cfo: null, retourCfo: null, commentaire: '', pieces });
+    Object.assign(d, { type, bcDoc: null, achat: null, sigs: {}, compta: null, rejetPar: null, rejetEtape: null, compte: me.compteMD, objet, proforma: pf.value === 'oui', montant, proformas, pfPropose, tranche: trancheOf(montant), paiement, description: $('#fDesc').value.trim(), date: now, statut: 'attente', sigDemandeur: sig, sigManager: null, sigRaf: null, raf: null, retourRaf: null, sigCfo: null, cfo: null, retourCfo: null, commentaire: '', pieces });
     seal(d, 'demandeur');
     d.historique.push({ at: now, by: session.id, action: `Fiche corrigée (version ${versionOf(d, 'demandeur')}), signée électroniquement et renvoyée au N+1` });
   } else {
     const ref = `FED-2026-${String(nextRef++).padStart(4, '0')}`;
-    d = { ref, type, bcDoc: null, sigs: {}, compta: null, compte: me.compteMD, demandeur: session.id, n1: me.n1, objet, proforma: pf.value === 'oui', montant, description: $('#fDesc').value.trim(), date: now, statut: 'attente',
+    d = { ref, type, bcDoc: null, sigs: {}, compta: null, compte: me.compteMD, demandeur: session.id, n1: me.n1, objet, proforma: pf.value === 'oui', montant, proformas, pfPropose, tranche: trancheOf(montant), paiement, description: $('#fDesc').value.trim(), date: now, statut: 'attente',
           sigDemandeur: sig, sigManager: null, sigRaf: null, raf: null, retourRaf: null, sigCfo: null, cfo: null, retourCfo: null, commentaire: '', pieces: pieces.map(p => p.replace('jointe', ref)), historique: [{ at: now, by: session.id, action: 'Fiche signée et transmise au N+1' }] };
     DEMANDES.unshift(d);
     seal(d, 'demandeur');
@@ -2772,22 +2820,14 @@ async function submitN1(ref, valider) {
 
 function submitRaf(ref) {
   const d = DEMANDES.find(x => x.ref === ref);
-  const tr = document.querySelector('input[name=tranche]:checked');
-  const num = id => Number($(id).value.replace(/\D/g, ''));
-  const proformas = [0, 1, 2].map(i => ({ fournisseur: $('#pfF' + i).value.trim(), ref: $('#pfR' + i).value.trim(), montant: num('#pfM' + i) }));
   const sigPad = $('#padRaf');
   let ok = true;
-  $('#eTranche').textContent = tr ? '' : 'Cochez la tranche du montant d\'achat.'; if (!tr) ok = false;
-  const p1 = proformas[0];
-  const pfOk = p1.fournisseur && p1.ref && p1.montant > 0;
-  $('#ePf').textContent = pfOk ? '' : 'Renseignez au moins la proforma 1 (fournisseur, référence et montant).'; if (!pfOk) ok = false;
-  ['#pfF0', '#pfR0', '#pfM0'].forEach(id => $(id).classList.toggle('invalid', !pfOk && !$(id).value.trim()));
   $('#eSigR').textContent = sigPad.isEmpty ? 'Votre signature est obligatoire pour valider.' : ''; if (sigPad.isEmpty) { ok = false; sigPad.classList.add('invalid'); }
   if (!checkCertify('rafCert')) ok = false;
   if (!ok) { toast('Complétez les champs signalés'); return; }
   const now = nowIso();
   Object.assign(d, { statut: 'cfo', sigRaf: { by: session.id, at: now, img: sigPad.toDataURL() }, retourCfo: null,
-    raf: { tranche: Number(tr.value), proformas, reserve: $('#rafReserve').value.trim(), date: now } });
+    raf: { tranche: d.tranche, proformas: d.proformas.map(x => ({ ...x })), reserve: $('#rafReserve').value.trim(), date: now } });
   seal(d, 'raf');
   d.historique.push({ at: now, by: session.id, action: 'Validée et signée électroniquement par le RAF/HF, transmise au CFO', note: d.raf.reserve ? `Réserve : ${d.raf.reserve}` : undefined });
   notify(d.demandeur, ref, `Votre demande a été validée par ${session.name} (RAF/HF) et transmise au CFO.`);
@@ -3060,7 +3100,8 @@ function buildFedPdf(d) {
   row([['Date', fDate(d.date)], ['Objet', d.objet]]);
   row([['Demandeur', u.nom], ['Service', u.service]]);
   row([['Fonction', u.fonction], ['Référence N°', d.ref]]);
-  row([['Pro-forma', d.proforma ? `Oui${d.pieces.length ? ' · ' + d.pieces[0] : ''}` : 'Non'], ['Montant estimé', fcfa(d.montant)]]);
+  row([['Pro-forma', d.proforma ? `Oui${d.pieces.length ? ' · ' + d.pieces[0] : ''}` : 'Non'], ['Montant (pro-forma retenue)', fcfa(d.montant)]]);
+  row([['Mode de paiement', d.paiement || '—']]);
   if (d.description) row([['Précisions', d.description]]);
   signs([
     ['Signature Demandeur', d.sigDemandeur, 'Non signée'],
@@ -3069,14 +3110,12 @@ function buildFedPdf(d) {
   if (d.statut === 'rejetee' && d.commentaire) row([[`Motif du rejet (${nom(d.rejetPar || d.n1)})`, d.commentaire]]);
 
   if (d.raf || d.statut === 'raf') {
-    const raf = userById(RAF_ID), r = d.raf;
+    const raf = userById(RAF_ID), r = d.raf || { tranche: d.tranche, proformas: d.proformas, reserve: '', date: null };
     section('Validation (1) de la demande par RAF/HF');
     row([['Fonction', raf.fonction.toUpperCase()], ['Nom-Prénom', raf.nom.toUpperCase()]]);
-    if (r && d.sigRaf) {
-      row([['Montant achat', TRANCHES.map((t, i) => `${i === r.tranche ? '[X]' : '[  ]'} ${t}`).join('    ')]]);
-      r.proformas.forEach((pf, i) => row([[`Proforma ${i + 1}`, pf.fournisseur], ['Réf N°', pf.ref], ['Montant', pf.montant ? fcfa(pf.montant) : '— FCFA']]));
-      row([['Réserve', r.reserve], ['Date', fDate(r.date)]]);
-    }
+    row([['Montant achat', TRANCHES.map((t, i) => `${i === r.tranche ? '[X]' : '[  ]'} ${t}`).join('    ')]]);
+    r.proformas.forEach((pf, i) => row([[`Proforma ${i + 1}${i === d.pfPropose ? ' (retenue)' : ''}`, pf.fournisseur], ['Réf N°', pf.ref], ['Montant', pf.montant ? fcfa(pf.montant) : '— FCFA']]));
+    if (d.raf) row([['Réserve', r.reserve], ['Date', fDate(r.date)]]);
     signs([['Signature', d.sigRaf, `En attente de ${raf.nom} (RAF/HF)`]]);
   }
   if (d.cfo || d.statut === 'cfo') {
