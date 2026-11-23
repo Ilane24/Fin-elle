@@ -1335,7 +1335,7 @@ function enterApp(u) {
 }
 
 function startSession(u) {
-  if (!startSession.sealed) { sealAll(); startSession.sealed = true; }
+  if (!startSession.sealed) { sealAll(); DEMANDES.forEach(repriseSignatures); startSession.sealed = true; }
   session = { id: u.id, name: u.nom, role: u.role, email: `${u.id}@${ALLOWED_DOMAIN}` };
   $('#meName').textContent = u.nom;
   $('#meRole').textContent = `${ROLES[u.role].label} · ${u.service}`;
@@ -2352,6 +2352,7 @@ function submitMenueStep(ref) {
   if (next === 'compta') notifyFacilities(d);
   audit(`Signature électronique · ${LEVELS['md_' + step]}`, ref);
   toast(`Formulaire signé et verrouillé · transmis à ${nom(MENUE_ACTOR[next])}`);
+  repriseApres(d);
   render();
 }
 
@@ -2603,6 +2604,48 @@ function achatsSummary() {
     </div>`;
 }
 
+/* Une seule signature par personne et par dossier : si le signataire attendu a déjà validé et signé cette FED,
+   sa validation et sa signature sont reprises automatiquement pour les étapes suivantes qui ne demandent
+   aucune saisie (RAF/HF, CFO avec les valeurs proposées, signatures de la fiche de menues dépenses). */
+function dejaSigne(d, id) {
+  const sigs = [d.sigManager, d.sigRaf, d.sigCfo, d.sigs?.raf, d.sigs?.dc, d.sigs?.dg].filter(Boolean);
+  return sigs.find(sg => sg.by === id) || null;
+}
+function repriseSignatures(d) {
+  const reprises = [];
+  for (let n = 0; n < 8; n++) {
+    const id = actorOf(d);
+    if (!id || id === d.demandeur || ['bc', 'achat', 'm_compta', 'validee', 'rejetee', 'attente'].includes(d.statut)) break;
+    const prev = dejaSigne(d, id);
+    if (!prev) break;
+    const now = nowIso(), sig = { by: id, at: now, img: prev.img, auto: true, reprise: true };
+    let etape;
+    if (d.statut === 'raf') {
+      Object.assign(d, { statut: 'cfo', sigRaf: sig, retourCfo: null, raf: { tranche: d.tranche, proformas: d.proformas.map(x => ({ ...x })), reserve: '', date: now } });
+      seal(d, 'raf'); etape = 'validation (1) RAF/HF';
+      notify(CFO_ID, d.ref, `La demande ${d.ref} attend votre validation (2).`);
+    } else if (d.statut === 'cfo') {
+      const menue = d.type === 'menue';
+      Object.assign(d, { statut: menue ? 'm_raf' : 'bc', achat: null, bcDoc: null, sigCfo: sig,
+        cfo: { proforma: d.pfPropose ?? 0, montant: d.montant, lettres: enLettres(d.montant), reserve: '', date: now } });
+      seal(d, 'cfo'); etape = 'validation (2) CFO';
+      if (menue) notify(RAF_ID, d.ref, `FED ${d.ref} validée : la fiche de menues dépenses attend votre signature.`);
+      else notify(COMPTA_ID, d.ref, `FED ${d.ref} validée pour ${fcfa(d.montant)} : bon de commande à établir et à délivrer à Facilities.`);
+    } else if (/^m_(raf|dc|dg)$/.test(d.statut)) {
+      const step = d.statut.slice(2), order = menueOrder(d), next = order[order.indexOf(step) + 1];
+      d.sigs[step] = { ...sig, note: '' }; seal(d, 'md_' + step); d.statut = 'm_' + next;
+      etape = `fiche de menues dépenses (${MENUE_ROLES[step].replace(/^l[ae] /, '')})`;
+      notify(MENUE_ACTOR[next], d.ref, `La fiche de menues dépenses de ${nom(d.demandeur)} attend votre ${next === 'compta' ? 'visa' : 'signature'}.`);
+      if (next === 'compta') notifyFacilities(d);
+    } else break;
+    d.historique.push({ at: now, by: id, action: `Signature reprise automatiquement · ${etape} (${nom(id)} a déjà signé cette FED)` });
+    audit(`Signature reprise automatiquement · ${etape}`, d.ref);
+    reprises.push(`${nom(id)} (${etape})`);
+  }
+  return reprises;
+}
+const repriseApres = d => { const r = repriseSignatures(d); if (r.length) toast(`Signature reprise automatiquement : ${r.join(' · ')}`); };
+
 function notifyFacilities(d) {
   const msg = `${d.type === 'menue' ? 'Menue dépense signée, fonds décaissés' : 'Bon de commande délivré par la Comptabilité'} (${d.ref}) : achat à effectuer sous 72 h, avant le ${fDateTime(achatEcheance(d))}.`;
   USERS.filter(u => u.service === SERVICE_ACHATS && u.actif && u.id !== d.demandeur).forEach(u => notify(u.id, d.ref, msg));
@@ -2817,6 +2860,7 @@ async function submitN1(ref, valider) {
   notify(RAF_ID, ref, `${session.name} a validé une demande de ${nom(d.demandeur)} : elle attend votre validation.`);
   audit(`Signature électronique · ${LEVELS.manager} (signature enregistrée)`, ref);
   toast(`Signature apposée et formulaire verrouillé · transmis à ${nom(RAF_ID)} (RAF/HF)`);
+  repriseApres(d);
   render();
 }
 
@@ -2836,6 +2880,7 @@ function submitRaf(ref) {
   notify(CFO_ID, ref, `${session.name} (RAF/HF) a validé une demande de ${nom(d.demandeur)} : elle attend votre validation.`);
   audit('Demande validée (RAF/HF)', ref);
   toast(`Demande ${ref} validée · transmise à ${nom(CFO_ID)} (CFO)`);
+  repriseApres(d);
   render();
 }
 
@@ -2907,6 +2952,7 @@ function submitCfo(ref) {
   if (!menue) notify(COMPTA_ID, ref, `FED ${ref} validée pour ${fcfa(montant)} : bon de commande à établir et à délivrer à Facilities.`);
   audit('Validation (2) CFO', ref);
   toast(`FED ${ref} validée · ${menue ? 'fiche de menues dépenses transmise au RAF/HF' : 'bon de commande à établir par la Comptabilité'}`);
+  repriseApres(d);
   render();
 }
 
