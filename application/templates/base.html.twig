@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>{% block title %}Fin'Elle{% endblock %} · Fin'Elle</title>
+    <link rel="icon" href="{{ asset('images/logo-finelle.png') }}">
+    <link rel="stylesheet" href="{{ asset('css/app.css') }}">
+    <script src="{{ asset('js/app.js') }}" defer></script>
+</head>
+<body>
+<div class="app">
+    <aside class="sidebar">
+        <a href="{{ path('accueil') }}" class="logo"><img src="{{ asset('images/logo-finelle.png') }}" alt="Fin'Elle – Filiale du Groupe Cofina"></a>
+        <nav class="nav">
+            <span class="nav-label">Dépenses</span>
+            <a href="{{ path('accueil') }}" class="nav-item {{ app.current_route == 'accueil' ? 'active' }}">Tableau de bord</a>
+            <span class="nav-label">Administration</span>
+            <a href="{{ path('utilisateurs') }}" class="nav-item {{ app.current_route == 'utilisateurs' ? 'active' }}">Utilisateurs</a>
+        </nav>
+    </aside>
+
+    <div class="main">
+        <header class="topbar">
+            <span class="muted">Circuit des dépenses · Fin'Elle</span>
+        </header>
+
+        <main class="content">
+            {% for type, messages in app.flashes %}
+                {% for message in messages %}
+                    <div class="alert alert-{{ type }}" data-auto-fermeture>{{ message }}</div>
+                {% endfor %}
+            {% endfor %}
+
+            {% block body %}{% endblock %}
+        </main>
+    </div>
+</div>
+</body>
+</html>

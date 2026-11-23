@@ -53,3 +53,7 @@ Connexion · Tableau de bord · Nouvelle demande (fiche + signature) · Demandes
 - Ordinateur d'abord ; sur mobile, navigation repliable et tableaux défilants.
 - Sécurité simulée : e-mail restreint au domaine (`ALLOWED_DOMAIN`), droits par rôle (`ROLES`), journal d'audit.
 - Données fictives uniquement, conservées en mémoire (réinitialisées au rechargement).
+
+## Application (développement)
+
+L'application réelle se trouve dans le dossier `application/` : Symfony 7.4, Twig, CSS classique, un peu de JavaScript et MySQL. Pour l'installer et la lancer sur un Mac avec MAMP, suivez `application/docs/01-installation-sur-mac-avec-mamp.md`.

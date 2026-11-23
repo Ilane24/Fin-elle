@@ -1,0 +1,56 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}Utilisateurs{% endblock %}
+
+{% block body %}
+    <div class="page-head">
+        <div>
+            <h1>Utilisateurs</h1>
+            <p class="muted">Chaque utilisateur appartient à un département. Son N+1, qui signe ses FED, appartient au même département.</p>
+        </div>
+        <input type="search" class="input recherche" placeholder="Rechercher un nom, un service…" data-filtre-tableau="#tableUtilisateurs">
+    </div>
+
+    <div class="table-wrap">
+        <table id="tableUtilisateurs">
+            <thead>
+            <tr>
+                <th>Utilisateur</th>
+                <th>Fonction</th>
+                <th>Département · service</th>
+                <th>Rôle</th>
+                <th>N+1</th>
+                <th>Menues dépenses</th>
+                <th>Statut</th>
+            </tr>
+            </thead>
+            <tbody>
+            {% for u in utilisateurs %}
+                <tr>
+                    <td>
+                        <div class="who">
+                            <span class="avatar">{{ u.initiales }}</span>
+                            <div><b>{{ u.nomComplet }}</b><div class="muted petit">{{ u.email }}</div></div>
+                        </div>
+                    </td>
+                    <td>{{ u.fonction }}</td>
+                    <td><b>{{ u.departement }}</b><div class="muted petit">{{ u.service }}</div></td>
+                    <td>{{ u.roleLibelle }}</td>
+                    <td>
+                        {% if u.n1 %}
+                            {{ u.n1.nomComplet }}
+                            {% if not u.n1DuMemeDepartement %}<div><span class="badge b-danger">Autre département</span></div>{% endif %}
+                        {% else %}
+                            <span class="muted">—</span>
+                        {% endif %}
+                    </td>
+                    <td>{{ u.compteMenuesDepenses ? u.numeroCompteMd : '—' }}</td>
+                    <td>
+                        {% if u.actif %}<span class="badge b-success">Actif</span>{% else %}<span class="badge b-neutral">Désactivé</span>{% endif %}
+                    </td>
+                </tr>
+            {% endfor %}
+            </tbody>
+        </table>
+    </div>
+{% endblock %}

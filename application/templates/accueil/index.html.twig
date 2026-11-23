@@ -1,0 +1,31 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}Tableau de bord{% endblock %}
+
+{% block body %}
+    <div class="page-head">
+        <div>
+            <h1>Tableau de bord</h1>
+            <p class="muted">Bienvenue sur l'application de gestion des achats Fin'Elle.</p>
+        </div>
+    </div>
+
+    <div class="kpis">
+        <div class="card kpi">
+            <span class="kpi-top">Utilisateurs actifs</span>
+            <span class="kpi-val">{{ nbUtilisateurs }}</span>
+        </div>
+        <div class="card kpi">
+            <span class="kpi-top">Départements</span>
+            <span class="kpi-val">{{ nbDepartements }}</span>
+        </div>
+        <div class="card kpi">
+            <span class="kpi-top">Services</span>
+            <span class="kpi-val">{{ nbServices }}</span>
+        </div>
+        <div class="card kpi">
+            <span class="kpi-top">Comptes menues dépenses</span>
+            <span class="kpi-val">{{ nbComptesMd }}</span>
+        </div>
+    </div>
+{% endblock %}
