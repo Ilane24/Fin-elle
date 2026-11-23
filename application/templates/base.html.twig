@@ -7,6 +7,7 @@
     <link rel="icon" href="{{ asset('images/logo-finelle.png') }}">
     <link rel="stylesheet" href="{{ asset('css/app.css') }}">
     <script src="{{ asset('js/app.js') }}" defer></script>
+    {% block javascripts %}{% endblock %}
 </head>
 <body>
 <div class="app">
@@ -15,9 +16,23 @@
         <nav class="nav">
             <span class="nav-label">Dépenses</span>
             <a href="{{ path('accueil') }}" class="nav-item {{ app.current_route == 'accueil' ? 'active' }}">Tableau de bord</a>
-            <span class="nav-label">Administration</span>
-            <a href="{{ path('utilisateurs') }}" class="nav-item {{ app.current_route == 'utilisateurs' ? 'active' }}">Utilisateurs</a>
+            <span class="nav-label">Mon compte</span>
+            <a href="{{ path('signature') }}" class="nav-item {{ app.current_route == 'signature' ? 'active' }}">Ma signature</a>
+            {% if is_granted('ROLE_ADMIN') %}
+                <span class="nav-label">Administration</span>
+                <a href="{{ path('utilisateurs') }}" class="nav-item {{ app.current_route == 'utilisateurs' ? 'active' }}">Utilisateurs</a>
+            {% endif %}
         </nav>
+        <div class="sidebar-foot">
+            <div class="user-chip">
+                <span class="avatar">{{ app.user.initiales }}</span>
+                <div class="meta">
+                    <b>{{ app.user.nomComplet }}</b>
+                    <span>{{ app.user.roleLibelle }} · {{ app.user.service }}</span>
+                </div>
+                <a href="{{ path('deconnexion') }}" class="lien-deconnexion" title="Se déconnecter">Quitter</a>
+            </div>
+        </div>
     </aside>
 
     <div class="main">

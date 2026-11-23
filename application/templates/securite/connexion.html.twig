@@ -1,0 +1,27 @@
+{% extends 'base_simple.html.twig' %}
+
+{% block title %}Connexion{% endblock %}
+
+{% block body %}
+    <h1>Connexion</h1>
+    <p class="muted">Accès réservé aux collaborateurs.</p>
+
+    {% if erreur %}
+        <div class="alert alert-error">{{ erreur }}</div>
+    {% endif %}
+
+    <form method="post" action="{{ path('connexion') }}" class="formulaire">
+        <div class="champ">
+            <label for="email">E-mail professionnel</label>
+            <input class="input" type="email" id="email" name="email" value="{{ dernierEmail }}" autocomplete="username" required autofocus>
+        </div>
+        <div class="champ">
+            <label for="motDePasse">Mot de passe</label>
+            <input class="input" type="password" id="motDePasse" name="motDePasse" autocomplete="current-password" required>
+        </div>
+        <input type="hidden" name="_csrf_token" value="{{ csrf_token('authenticate') }}">
+        <button class="btn btn-primary btn-large" type="submit">Se connecter</button>
+    </form>
+
+    <p class="bas-de-carte">Pas encore de compte ? <a href="{{ path('inscription') }}">Créer un compte</a></p>
+{% endblock %}

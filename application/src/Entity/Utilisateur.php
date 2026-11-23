@@ -55,6 +55,7 @@ class Utilisateur implements UserInterface, PasswordAuthenticatedUserInterface
     private ?Service $service = null;
 
     #[ORM\ManyToOne]
+    #[ORM\JoinColumn(onDelete: 'SET NULL')]
     private ?Utilisateur $n1 = null;
 
     #[ORM\Column]
@@ -68,6 +69,9 @@ class Utilisateur implements UserInterface, PasswordAuthenticatedUserInterface
 
     #[ORM\Column(type: Types::DATETIME_IMMUTABLE)]
     private \DateTimeImmutable $creeLe;
+
+    #[ORM\OneToOne(mappedBy: 'utilisateur')]
+    private ?SignatureReference $signature = null;
 
     public function __construct()
     {
@@ -271,5 +275,17 @@ class Utilisateur implements UserInterface, PasswordAuthenticatedUserInterface
     public function getCreeLe(): \DateTimeImmutable
     {
         return $this->creeLe;
+    }
+
+    public function getSignature(): ?SignatureReference
+    {
+        return $this->signature;
+    }
+
+    public function setSignature(SignatureReference $signature): static
+    {
+        $this->signature = $signature;
+
+        return $this;
     }
 }

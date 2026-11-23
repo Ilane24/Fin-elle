@@ -9,7 +9,8 @@ La maquette d'origine se trouve dans le dossier `../maquette` et n'est pas modif
 | Fichier | Contenu |
 |---|---|
 | `docs/01-installation-sur-mac-avec-mamp.md` | Installer et lancer le site sur un Mac avec MAMP, pas à pas |
-| `docs/02-etapes-1-et-2-expliquees.md` | Le code des étapes 1 et 2, fichier par fichier, avec ses explications |
+| `docs/02-etapes-1-et-2-expliquees.md` | Étapes 1 et 2 : base du projet et base de données, code et explications |
+| `docs/03-etape-3-expliquee.md` | Étape 3 : connexion, création de compte et signature, code et explications |
 
 ## Démarrage rapide
 
@@ -19,4 +20,4 @@ composer base      # crée la base, les tables et les données de démonstration
 composer start     # démarre le site sur http://localhost:8000 (Ctrl + C pour l'arrêter)
 ```
 
-Comptes de démonstration : `prenom.nom@cofina-demo.com`, mot de passe `demo2026` (la connexion arrive à l'étape 3).
+Comptes de démonstration : `prenom.nom@cofina-demo.com`, mot de passe `demo2026` (par exemple `fatou.diallo@cofina-demo.com`). L'administratrice est `mireille.gbagbo@cofina-demo.com`. À la première connexion, chaque compte enregistre sa signature.

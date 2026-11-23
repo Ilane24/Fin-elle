@@ -1,0 +1,114 @@
+{% extends 'base_simple.html.twig' %}
+
+{% block title %}Créer un compte{% endblock %}
+{% block largeur %}carte-large{% endblock %}
+
+{% block javascripts %}
+    <script src="{{ asset('js/inscription.js') }}" defer></script>
+{% endblock %}
+
+{% macro erreur(erreurs, nom) %}
+    {% if erreurs[nom] is defined %}<span class="erreur">{{ erreurs[nom] }}</span>{% endif %}
+{% endmacro %}
+
+{% block body %}
+    {% import _self as f %}
+    <h1>Créer un compte</h1>
+    <p class="muted">Les champs marqués * sont obligatoires.</p>
+
+    {% if erreurs.formulaire is defined %}
+        <div class="alert alert-error">{{ erreurs.formulaire }}</div>
+    {% endif %}
+
+    <form method="post" class="formulaire" novalidate>
+        <h2 class="partie">Identification</h2>
+        <div class="grille-2">
+            <div class="champ">
+                <label for="nom">Nom *</label>
+                <input class="input" id="nom" name="nom" value="{{ saisie.nom ?? '' }}">
+                {{ f.erreur(erreurs, 'nom') }}
+            </div>
+            <div class="champ">
+                <label for="prenom">Prénom *</label>
+                <input class="input" id="prenom" name="prenom" value="{{ saisie.prenom ?? '' }}">
+                {{ f.erreur(erreurs, 'prenom') }}
+            </div>
+            <div class="champ">
+                <label for="matricule">Matricule *</label>
+                <input class="input" id="matricule" name="matricule" value="{{ saisie.matricule ?? '' }}" placeholder="Ex. CF-01234">
+                {{ f.erreur(erreurs, 'matricule') }}
+            </div>
+            <div class="champ">
+                <label for="telephone">Téléphone</label>
+                <input class="input" id="telephone" name="telephone" value="{{ saisie.telephone ?? '' }}" placeholder="+225 00 00 00 00 00">
+            </div>
+            <div class="champ pleine-largeur">
+                <label for="email">E-mail professionnel *</label>
+                <input class="input" type="email" id="email" name="email" value="{{ saisie.email ?? '' }}" placeholder="prenom.nom@{{ domaine }}">
+                {{ f.erreur(erreurs, 'email') }}
+            </div>
+        </div>
+
+        <h2 class="partie">Compte</h2>
+        <div class="grille-2">
+            <div class="champ">
+                <label for="fonction">Fonction *</label>
+                <input class="input" id="fonction" name="fonction" value="{{ saisie.fonction ?? '' }}" placeholder="Ex. Assistante administrative">
+                {{ f.erreur(erreurs, 'fonction') }}
+            </div>
+            <div class="champ">
+                <label for="departement">Département *</label>
+                <select class="input" id="departement" name="departement" data-filtre-departement>
+                    <option value="">Choisir…</option>
+                    {% for d in departements %}
+                        <option value="{{ d.id }}" {{ (saisie.departement ?? '') == d.id ? 'selected' }}>{{ d.nom }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="champ">
+                <label for="service">Service *</label>
+                <select class="input" id="service" name="service">
+                    <option value="">Choisissez d'abord le département</option>
+                    {% for d in departements %}
+                        {% for s in d.services %}
+                            <option value="{{ s.id }}" data-departement="{{ d.id }}" {{ (saisie.service ?? '') == s.id ? 'selected' }}>{{ s.libelle }}</option>
+                        {% endfor %}
+                    {% endfor %}
+                </select>
+                {{ f.erreur(erreurs, 'service') }}
+            </div>
+            <div class="champ">
+                <label for="n1">Supérieur hiérarchique (N+1) *</label>
+                <select class="input" id="n1" name="n1">
+                    <option value="">Choisissez d'abord le département</option>
+                    {% for r in responsables %}
+                        <option value="{{ r.id }}" data-departement="{{ r.departement.id }}" {{ (saisie.n1 ?? '') == r.id ? 'selected' }}>{{ r.nomComplet }} – {{ r.fonction }}</option>
+                    {% endfor %}
+                </select>
+                {{ f.erreur(erreurs, 'n1') }}
+                <span class="aide">Seuls les responsables de votre département peuvent signer vos FED.</span>
+            </div>
+            <div class="champ">
+                <label for="motDePasse">Mot de passe *</label>
+                <input class="input" type="password" id="motDePasse" name="motDePasse" placeholder="8 caractères dont 1 chiffre" autocomplete="new-password">
+                {{ f.erreur(erreurs, 'motDePasse') }}
+            </div>
+            <div class="champ">
+                <label for="confirmation">Confirmation *</label>
+                <input class="input" type="password" id="confirmation" name="confirmation" autocomplete="new-password">
+                {{ f.erreur(erreurs, 'confirmation') }}
+            </div>
+        </div>
+
+        <h2 class="partie">Option</h2>
+        <label class="option">
+            <input type="checkbox" name="compteMenuesDepenses" {{ saisie.compteMenuesDepenses is defined ? 'checked' }}>
+            <span><b>Compte menues dépenses</b><br><span class="muted">Obligatoire pour effectuer une menue dépense.</span></span>
+        </label>
+
+        <input type="hidden" name="_token" value="{{ csrf_token('inscription') }}">
+        <button class="btn btn-primary btn-large" type="submit">Créer mon compte</button>
+    </form>
+
+    <p class="bas-de-carte">Déjà inscrit(e) ? <a href="{{ path('connexion') }}">Se connecter</a></p>
+{% endblock %}

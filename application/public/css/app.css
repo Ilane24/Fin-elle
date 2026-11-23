@@ -101,3 +101,58 @@ tbody tr:hover td { background: #FCFCFD; }
 .alert-success { background: var(--success-soft); border-color: #BFE3CD; color: var(--success); }
 .alert-error { background: var(--danger-soft); border-color: #F5C2C2; color: var(--danger); }
 .alert.disparait { opacity: 0; }
+
+/* Barre latérale : personne connectée */
+.sidebar-foot { margin-top: auto; }
+.user-chip { display: flex; align-items: center; gap: 10px; padding: 10px; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); }
+.user-chip .meta { min-width: 0; flex: 1; }
+.user-chip .meta b, .user-chip .meta span { display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.user-chip .meta span { font-size: 12px; color: var(--text-muted); }
+.lien-deconnexion { font-size: 12px; font-weight: 600; }
+
+/* Pages simples : connexion, création de compte, signature */
+.page-simple { display: grid; place-items: center; min-height: 100%; padding: 32px 16px; background: radial-gradient(1200px 600px at 100% 0, var(--accent-soft), transparent 60%), var(--bg); }
+.carte-simple { width: 100%; max-width: 440px; padding: 32px; display: grid; gap: 16px; background: var(--bg); border: 1px solid var(--border); border-radius: 16px; box-shadow: var(--shadow-hover); }
+.carte-simple.carte-large { max-width: 880px; }
+.carte-simple p { margin: 0; }
+.logo-grand { height: 58px; }
+.bas-de-carte { text-align: center; color: var(--text-muted); }
+
+/* Formulaires */
+.formulaire { display: grid; gap: 14px; }
+.champ { display: grid; gap: 6px; align-content: start; }
+.champ label { font-size: 13px; font-weight: 600; }
+.grille-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 14px 16px; }
+.pleine-largeur { grid-column: 1 / -1; }
+.partie { margin-top: 6px; padding-bottom: 6px; font-size: 12px; text-transform: uppercase; letter-spacing: .06em; color: var(--text-muted); border-bottom: 1px solid var(--border); }
+.erreur { font-size: 12.5px; color: var(--danger); }
+.aide { font-size: 12px; color: var(--text-muted); }
+.option { display: flex; gap: 12px; padding: 14px; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); cursor: pointer; }
+.option input { accent-color: var(--accent); width: 18px; height: 18px; }
+.btn-large { justify-content: center; padding: 12px 16px; }
+.btn:disabled { opacity: .5; cursor: not-allowed; transform: none; }
+select.input:disabled { background: var(--surface); }
+
+/* Enregistrement de la signature */
+.etapes { display: flex; gap: 8px; margin: 0; padding: 0; list-style: none; counter-reset: etape; }
+.etapes li { flex: 1; padding: 8px 12px; text-align: center; font-size: 13px; color: var(--text-muted); background: var(--surface); border: 1px solid var(--border); border-radius: 999px; }
+.etapes li.en-cours { color: var(--accent); font-weight: 600; background: var(--accent-soft); border-color: var(--accent); }
+.etapes li.fait { color: var(--success); background: var(--success-soft); border-color: #BFE3CD; }
+.consignes { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
+.carte-consigne { display: grid; gap: 2px; padding: 12px 14px; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); }
+.carte-consigne span { font-size: 12.5px; color: var(--text-muted); }
+.zone-essai { display: grid; grid-template-columns: 1fr 180px; gap: 20px; align-items: start; }
+.zone-essai h2 { margin-bottom: 10px; }
+.pad { display: block; width: 100%; height: 220px; background: var(--bg); border: 1.5px dashed var(--accent); border-radius: var(--radius-sm); cursor: crosshair; touch-action: none; }
+.sous-pad { display: flex; justify-content: space-between; align-items: center; margin-top: 8px; }
+.vignettes { display: grid; gap: 10px; }
+.vignettes h3 { font-size: 12.5px; }
+.vignette { display: grid; gap: 4px; min-height: 70px; padding: 8px; text-align: left; font: inherit; font-size: 12px; color: var(--text-muted); background: var(--bg); border: 1px solid var(--border); border-radius: var(--radius-sm); cursor: pointer; transition: border-color var(--t); }
+.vignette:hover:not(:disabled) { border-color: var(--accent); }
+.vignette:disabled { cursor: default; }
+.vignette.en-cours { color: var(--accent); border: 1px dashed var(--accent); }
+.vignette img { max-width: 100%; max-height: 44px; }
+.actions { display: flex; justify-content: space-between; align-items: center; gap: 12px; }
+.signature-carte { display: grid; gap: 12px; max-width: 520px; }
+.signature-image { display: grid; place-items: center; height: 160px; background: var(--bg); border: 1px solid var(--border); border-radius: var(--radius-sm); }
+.signature-image img { max-height: 140px; max-width: 100%; }

@@ -1,0 +1,23 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}Ma signature{% endblock %}
+
+{% block body %}
+    <div class="page-head">
+        <div>
+            <h1>Ma signature</h1>
+            <p class="muted">Elle est apposée automatiquement lorsque vous validez une fiche.</p>
+        </div>
+    </div>
+
+    <div class="card signature-carte">
+        <div class="signature-image">
+            {% if image %}
+                <img src="{{ image }}" alt="Ma signature">
+            {% else %}
+                <span class="erreur">Impossible de lire la signature.</span>
+            {% endif %}
+        </div>
+        <p class="muted">Enregistrée le {{ signature.creeLe|date('d/m/Y à H:i') }} · essai {{ signature.essaiRetenu }} sur 3 · stockée chiffrée.</p>
+    </div>
+{% endblock %}

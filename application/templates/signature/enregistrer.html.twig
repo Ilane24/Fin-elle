@@ -1,0 +1,48 @@
+{% extends 'base_simple.html.twig' %}
+
+{% block title %}Enregistrez votre signature{% endblock %}
+{% block largeur %}carte-large{% endblock %}
+
+{% block javascripts %}
+    <script src="{{ asset('js/signature.js') }}" defer></script>
+{% endblock %}
+
+{% block body %}
+    <h1>Enregistrez votre signature</h1>
+    <p class="muted">Étape obligatoire, {{ app.user.prenom }}. Votre signature sera ensuite apposée automatiquement à chaque validation.</p>
+
+    <ol class="etapes" id="etapes">
+        <li class="en-cours">Essai 1</li>
+        <li>Essai 2</li>
+        <li>Essai 3</li>
+    </ol>
+
+    <div class="consignes">
+        <div class="carte-consigne"><b>Signez comme sur papier</b><span>À la souris ou au stylet.</span></div>
+        <div class="carte-consigne"><b>Signez en grand</b><span>Utilisez bien l'espace de signature.</span></div>
+        <div class="carte-consigne"><b>Signez trois fois</b><span>Nous gardons automatiquement la plus représentative.</span></div>
+    </div>
+
+    <div class="zone-essai">
+        <div>
+            <h2 id="titreEssai">Essai 1 sur 3</h2>
+            <canvas class="pad" id="pad"></canvas>
+            <div class="sous-pad">
+                <span class="erreur" id="erreurEssai"></span>
+                <button type="button" class="btn btn-ghost" id="effacer">Effacer</button>
+            </div>
+        </div>
+        <div class="vignettes" id="vignettes">
+            <h3 class="muted">Vos essais</h3>
+        </div>
+    </div>
+
+    <form method="post" action="{{ path('signature_enregistrer') }}" id="formulaireSignature">
+        <input type="hidden" name="essais" id="essais">
+        <input type="hidden" name="_token" value="{{ csrf_token('signature') }}">
+        <div class="actions">
+            <a href="{{ path('deconnexion') }}">Terminer plus tard (se déconnecter)</a>
+            <button type="button" class="btn btn-primary" id="valider" disabled>Valider l'essai 1</button>
+        </div>
+    </form>
+{% endblock %}

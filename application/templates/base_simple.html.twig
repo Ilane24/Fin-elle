@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>{% block title %}Fin'Elle{% endblock %} · Fin'Elle</title>
+    <link rel="icon" href="{{ asset('images/logo-finelle.png') }}">
+    <link rel="stylesheet" href="{{ asset('css/app.css') }}">
+    <script src="{{ asset('js/app.js') }}" defer></script>
+    {% block javascripts %}{% endblock %}
+</head>
+<body class="page-simple">
+<div class="carte-simple {% block largeur %}{% endblock %}">
+    <img class="logo-grand" src="{{ asset('images/logo-finelle.png') }}" alt="Fin'Elle – Filiale du Groupe Cofina">
+
+    {% for type, messages in app.flashes %}
+        {% for message in messages %}
+            <div class="alert alert-{{ type }}" data-auto-fermeture>{{ message }}</div>
+        {% endfor %}
+    {% endfor %}
+
+    {% block body %}{% endblock %}
+</div>
+</body>
+</html>
