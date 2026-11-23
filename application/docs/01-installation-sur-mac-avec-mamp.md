@@ -144,7 +144,7 @@ php bin/console doctrine:fixtures:load
 |---|---|
 | `doctrine:database:create` | Crée la base de données vide `finelle` dans MySQL |
 | `doctrine:migrations:migrate` | Exécute les scripts SQL du dossier `migrations/` : crée les tables `departement`, `service` et `utilisateur` (répondez `yes` si on vous le demande) |
-| `doctrine:fixtures:load` | Vide les tables et les remplit avec les données de démonstration : 6 départements, 10 services et 14 utilisateurs (répondez `yes`) |
+| `doctrine:fixtures:load` | Vide les tables et les remplit avec les données de démonstration : 6 départements, 9 services et 14 utilisateurs (répondez `yes`) |
 
 Vous pouvez voir les tables dans **phpMyAdmin** : page WebStart de MAMP → Tools → phpMyAdmin → base `finelle`.
 
