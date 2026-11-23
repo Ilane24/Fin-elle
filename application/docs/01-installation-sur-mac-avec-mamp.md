@@ -132,7 +132,13 @@ Cette ligne se lit ainsi : « se connecter à MySQL avec l'utilisateur `root`, l
 
 ## Étape 7 — Créer la base, les tables et les données de démonstration
 
-Toujours dans le dossier `application` :
+Toujours dans le dossier `application`, une seule commande suffit :
+
+```bash
+composer base
+```
+
+Elle enchaîne les trois commandes Symfony ci-dessous. Vous pouvez aussi les taper vous-même, une par une :
 
 ```bash
 php bin/console doctrine:database:create
@@ -153,13 +159,15 @@ Vous pouvez voir les tables dans **phpMyAdmin** : page WebStart de MAMP → Tool
 ## Étape 8 — Lancer le site
 
 ```bash
-php -S localhost:8000 -t public
+composer start
 ```
+
+C'est l'équivalent de `npm run start` : la commande lance `php -S localhost:8000 -t public`, le petit serveur web intégré à PHP. Vous pouvez aussi taper cette commande directement.
 
 Ouvrez <http://localhost:8000> dans votre navigateur. Vous voyez le tableau de bord, puis la page **Utilisateurs** dans le menu de gauche.
 
 - Le Terminal reste occupé tant que le site tourne : c'est normal. Pour l'arrêter, revenez dans le Terminal et tapez **Ctrl + C**.
-- La commande `php -S` utilise le petit serveur web intégré à PHP. Il suffit pour développer. Plus tard, sur le serveur de l'entreprise, on utilisera un vrai serveur web.
+- Ce petit serveur suffit pour développer. Plus tard, sur le serveur de l'entreprise, on utilisera un vrai serveur web.
 
 ---
 
@@ -172,7 +180,7 @@ Il suffit de :
 
 ```bash
 cd ~/Documents/fin-elle/application
-php -S localhost:8000 -t public
+composer start
 ```
 
 Quand je vous livre une nouvelle étape :
@@ -186,6 +194,31 @@ php bin/console doctrine:migrations:migrate
 ```
 
 La seconde crée seulement les nouvelles tables, sans toucher aux données existantes.
+
+Pour repartir de données de démonstration propres, relancez `composer base`. Attention : la commande vide les tables avant de les remplir.
+
+### D'où viennent `composer start` et `composer base` ?
+
+Elles sont déclarées dans le fichier `composer.json`, dans la partie `scripts`, comme les scripts de `package.json` avec npm :
+
+```json
+"start": [
+    "Composer\\Config::disableProcessTimeout",
+    "@php -S localhost:8000 -t public"
+],
+"base": [
+    "@php bin/console doctrine:database:create --if-not-exists",
+    "@php bin/console doctrine:migrations:migrate --no-interaction",
+    "@php bin/console doctrine:fixtures:load --no-interaction"
+]
+```
+
+- Chaque script est une liste de commandes, exécutées dans l'ordre.
+- `@php` signifie « avec le PHP qui exécute Composer », donc celui de MAMP.
+- `Composer\Config::disableProcessTimeout` désactive la limite de 5 minutes que Composer impose normalement à ses commandes. Sans elle, le serveur s'arrêterait tout seul au bout de 5 minutes.
+- `--if-not-exists` évite une erreur si la base existe déjà.
+- `--no-interaction` répond « oui » automatiquement aux questions de confirmation.
+- `composer list` affiche toutes les commandes disponibles, dont `start` et `base` avec leur description.
 
 ---
 

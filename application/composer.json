@@ -61,6 +61,15 @@
         ],
         "post-update-cmd": [
             "@auto-scripts"
+        ],
+        "start": [
+            "Composer\\Config::disableProcessTimeout",
+            "@php -S localhost:8000 -t public"
+        ],
+        "base": [
+            "@php bin/console doctrine:database:create --if-not-exists",
+            "@php bin/console doctrine:migrations:migrate --no-interaction",
+            "@php bin/console doctrine:fixtures:load --no-interaction"
         ]
     },
     "conflict": {
@@ -75,5 +84,9 @@
     "require-dev": {
         "doctrine/doctrine-fixtures-bundle": "^4.3",
         "symfony/maker-bundle": "^1.68"
+    },
+    "scripts-descriptions": {
+        "start": "Démarre le site sur http://localhost:8000",
+        "base": "Crée la base, les tables et les données de démonstration"
     }
 }

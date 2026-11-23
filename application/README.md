@@ -14,11 +14,9 @@ La maquette d'origine se trouve dans le dossier `../maquette` et n'est pas modif
 ## Démarrage rapide
 
 ```bash
-composer install
-php bin/console doctrine:database:create
-php bin/console doctrine:migrations:migrate
-php bin/console doctrine:fixtures:load
-php -S localhost:8000 -t public
+composer install   # télécharge Symfony et les bibliothèques
+composer base      # crée la base, les tables et les données de démonstration
+composer start     # démarre le site sur http://localhost:8000 (Ctrl + C pour l'arrêter)
 ```
 
 Comptes de démonstration : `prenom.nom@cofina-demo.com`, mot de passe `demo2026` (la connexion arrive à l'étape 3).
