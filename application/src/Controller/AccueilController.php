@@ -3,7 +3,7 @@
 namespace App\Controller;
 
 use App\Repository\DepartementRepository;
-use App\Repository\ServiceRepository;
+use App\Repository\SignatureReferenceRepository;
 use App\Repository\UtilisateurRepository;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\Response;
@@ -15,12 +15,12 @@ class AccueilController extends AbstractController
     public function index(
         UtilisateurRepository $utilisateurs,
         DepartementRepository $departements,
-        ServiceRepository $services,
+        SignatureReferenceRepository $signatures,
     ): Response {
         return $this->render('accueil/index.html.twig', [
             'nbUtilisateurs' => $utilisateurs->count(['actif' => true]),
             'nbDepartements' => $departements->count([]),
-            'nbServices' => $services->count([]),
+            'nbSignatures' => $signatures->count([]),
             'nbComptesMd' => $utilisateurs->count(['compteMenuesDepenses' => true]),
         ]);
     }

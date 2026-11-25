@@ -94,15 +94,17 @@ Une **entité** est une classe PHP qui représente une table. Chaque propriété
 
 Les lignes qui commencent par `#[ORM\...]` sont des **attributs**. Ce sont des étiquettes que Doctrine, la bibliothèque qui fait le lien avec la base, lit pour savoir comment créer la table.
 
-Les trois tables et leurs liens :
+Les deux tables et leurs liens :
 
 ```
-departement 1 ──── n service 1 ──── n utilisateur
-                                         │ n
-                                         └──── 1 utilisateur   (le N+1)
+departement 1 ──── n utilisateur
+                         │ n
+                         └──── 1 utilisateur   (le N+1)
 ```
 
-Un département contient plusieurs services. Un service contient plusieurs utilisateurs. Un utilisateur a un N+1, qui est lui-même un utilisateur.
+Un département contient plusieurs utilisateurs. Un utilisateur a un N+1, qui est lui-même un utilisateur.
+
+> **Mise à jour.** Dans la première version, il y avait une table `service` entre le département et l'utilisateur, ainsi qu'une colonne `matricule`. Les deux ont été retirés à votre demande : le département suffit. Le changement est expliqué dans `04-changement-departement-explique.md`. Le code ci-dessous est celui d'aujourd'hui.
 
 ### 4.1 `src/Entity/Departement.php`
 
@@ -112,8 +114,6 @@ Un département contient plusieurs services. Un service contient plusieurs utili
 namespace App\Entity;
 
 use App\Repository\DepartementRepository;
-use Doctrine\Common\Collections\ArrayCollection;
-use Doctrine\Common\Collections\Collection;
 use Doctrine\ORM\Mapping as ORM;
 
 #[ORM\Entity(repositoryClass: DepartementRepository::class)]
@@ -127,14 +127,9 @@ class Departement
     #[ORM\Column(length: 100, unique: true)]
     private string $nom = '';
 
-    /** @var Collection<int, Service> */
-    #[ORM\OneToMany(targetEntity: Service::class, mappedBy: 'departement')]
-    private Collection $services;
-
     public function __construct(string $nom = '')
     {
         $this->nom = $nom;
-        $this->services = new ArrayCollection();
     }
 
     public function getId(): ?int
@@ -154,12 +149,6 @@ class Departement
         return $this;
     }
 
-    /** @return Collection<int, Service> */
-    public function getServices(): Collection
-    {
-        return $this->services;
-    }
-
     public function __toString(): string
     {
         return $this->nom;
@@ -170,99 +159,10 @@ class Departement
 - `#[ORM\Entity(repositoryClass: ...)]` : cette classe est une table, et ses recherches se font avec `DepartementRepository`.
 - `#[ORM\Id] #[ORM\GeneratedValue] #[ORM\Column]` sur `$id` : la clé primaire, numérotée automatiquement par MySQL (`AUTO_INCREMENT`).
 - `#[ORM\Column(length: 100, unique: true)]` : une colonne `VARCHAR(100)`. Deux départements ne peuvent pas avoir le même nom.
-- `#[ORM\OneToMany(... mappedBy: 'departement')]` : « un département a plusieurs services ». Cette relation ne crée aucune colonne dans la table `departement`. Elle permet seulement d'écrire `$departement->getServices()`. La vraie colonne est `departement_id`, dans la table `service`.
-- `Collection` / `ArrayCollection` : une liste d'objets gérée par Doctrine. Elle doit être créée dans le constructeur.
 - `__toString()` : permet d'afficher directement un département dans Twig avec `{{ departement }}`.
 - Les accesseurs `getNom()` et `setNom()` : les propriétés sont `private`, donc on les lit et on les modifie par ces méthodes. `setNom()` renvoie `$this`, ce qui permet d'enchaîner les appels : `->setNom(...)->setFonction(...)`.
 
-### 4.2 `src/Entity/Service.php`
-
-```php
-<?php
-
-namespace App\Entity;
-
-use App\Repository\ServiceRepository;
-use Doctrine\ORM\Mapping as ORM;
-
-#[ORM\Entity(repositoryClass: ServiceRepository::class)]
-class Service
-{
-    #[ORM\Id]
-    #[ORM\GeneratedValue]
-    #[ORM\Column]
-    private ?int $id = null;
-
-    #[ORM\Column(length: 50, unique: true)]
-    private string $code = '';
-
-    #[ORM\Column(length: 100)]
-    private string $libelle = '';
-
-    #[ORM\ManyToOne(inversedBy: 'services')]
-    #[ORM\JoinColumn(nullable: false)]
-    private ?Departement $departement = null;
-
-    public function __construct(string $code = '', string $libelle = '', ?Departement $departement = null)
-    {
-        $this->code = $code;
-        $this->libelle = $libelle;
-        $this->departement = $departement;
-    }
-
-    public function getId(): ?int
-    {
-        return $this->id;
-    }
-
-    public function getCode(): string
-    {
-        return $this->code;
-    }
-
-    public function setCode(string $code): static
-    {
-        $this->code = $code;
-
-        return $this;
-    }
-
-    public function getLibelle(): string
-    {
-        return $this->libelle;
-    }
-
-    public function setLibelle(string $libelle): static
-    {
-        $this->libelle = $libelle;
-
-        return $this;
-    }
-
-    public function getDepartement(): ?Departement
-    {
-        return $this->departement;
-    }
-
-    public function setDepartement(Departement $departement): static
-    {
-        $this->departement = $departement;
-
-        return $this;
-    }
-
-    public function __toString(): string
-    {
-        return $this->libelle;
-    }
-}
-```
-
-- `#[ORM\ManyToOne(inversedBy: 'services')]` : « plusieurs services appartiennent à un département ». Doctrine crée la colonne `departement_id`, avec une **clé étrangère** vers `departement.id`.
-- `#[ORM\JoinColumn(nullable: false)]` : un service doit obligatoirement avoir un département (`NOT NULL`).
-- `code` : un identifiant court et stable (`FACILITIES`, `COMPTABILITE`). Le code de l'application s'en servira, par exemple pour reconnaître le service Facilities. `libelle` est le nom affiché.
-
-### 4.3 `src/Entity/Utilisateur.php`
+### 4.2 `src/Entity/Utilisateur.php`
 
 ```php
 <?php
@@ -293,9 +193,6 @@ class Utilisateur implements UserInterface, PasswordAuthenticatedUserInterface
     #[ORM\Column]
     private ?int $id = null;
 
-    #[ORM\Column(length: 20, unique: true)]
-    private string $matricule = '';
-
     #[ORM\Column(length: 100)]
     private string $nom = '';
 
@@ -319,9 +216,10 @@ class Utilisateur implements UserInterface, PasswordAuthenticatedUserInterface
 
     #[ORM\ManyToOne]
     #[ORM\JoinColumn(nullable: false)]
-    private ?Service $service = null;
+    private ?Departement $departement = null;
 
     #[ORM\ManyToOne]
+    #[ORM\JoinColumn(onDelete: 'SET NULL')]
     private ?Utilisateur $n1 = null;
 
     #[ORM\Column]
@@ -336,6 +234,9 @@ class Utilisateur implements UserInterface, PasswordAuthenticatedUserInterface
     #[ORM\Column(type: Types::DATETIME_IMMUTABLE)]
     private \DateTimeImmutable $creeLe;
 
+    #[ORM\OneToOne(mappedBy: 'utilisateur')]
+    private ?SignatureReference $signature = null;
+
     public function __construct()
     {
         $this->creeLe = new \DateTimeImmutable();
@@ -344,18 +245,6 @@ class Utilisateur implements UserInterface, PasswordAuthenticatedUserInterface
     public function getId(): ?int
     {
         return $this->id;
-    }
-
-    public function getMatricule(): string
-    {
-        return $this->matricule;
-    }
-
-    public function setMatricule(string $matricule): static
-    {
-        $this->matricule = $matricule;
-
-        return $this;
     }
 
     public function getNom(): string
@@ -471,21 +360,16 @@ class Utilisateur implements UserInterface, PasswordAuthenticatedUserInterface
     {
     }
 
-    public function getService(): ?Service
-    {
-        return $this->service;
-    }
-
-    public function setService(Service $service): static
-    {
-        $this->service = $service;
-
-        return $this;
-    }
-
     public function getDepartement(): ?Departement
     {
-        return $this->service?->getDepartement();
+        return $this->departement;
+    }
+
+    public function setDepartement(Departement $departement): static
+    {
+        $this->departement = $departement;
+
+        return $this;
     }
 
     public function getN1(): ?Utilisateur
@@ -539,6 +423,18 @@ class Utilisateur implements UserInterface, PasswordAuthenticatedUserInterface
     {
         return $this->creeLe;
     }
+
+    public function getSignature(): ?SignatureReference
+    {
+        return $this->signature;
+    }
+
+    public function setSignature(SignatureReference $signature): static
+    {
+        $this->signature = $signature;
+
+        return $this;
+    }
 }
 ```
 
@@ -552,7 +448,7 @@ Les points importants :
 - **Les rôles** : la constante `ROLES` liste les rôles possibles avec leur libellé en français. Chaque utilisateur a **un seul rôle**, dans la colonne `role` : c'est plus simple qu'une liste. `getRoles()` y ajoute `ROLE_USER`, que Symfony attend pour toute personne connectée.
 - **Le mot de passe** n'est jamais stocké en clair. La méthode s'appelle `setMotDePasse($motDePasseChiffre)` pour rappeler qu'elle reçoit le mot de passe **déjà chiffré** (on le voit dans les fixtures).
 - **`$n1`** est une relation `ManyToOne` vers… `Utilisateur` lui-même. Un N+1 est un utilisateur comme un autre. Doctrine crée la colonne `n1_id`. Elle est facultative, car la DG ou le CFO n'ont pas de N+1.
-- **`getDepartement()`** : il n'y a pas de colonne « département » dans `utilisateur`. Le département se déduit du service : `$this->service?->getDepartement()`. Le `?->` signifie « si le service existe ». On évite ainsi de stocker deux fois la même information.
+- **`$departement`** est une relation `ManyToOne` : « plusieurs utilisateurs appartiennent à un département ». Doctrine crée la colonne `departement_id`, avec une **clé étrangère** vers `departement.id`. `#[ORM\JoinColumn(nullable: false)]` la rend obligatoire (`NOT NULL`) : tout utilisateur a un département.
 - **`isN1DuMemeDepartement()`** applique la règle métier : le N+1 doit appartenir au même département. La page Utilisateurs l'utilise pour signaler un rattachement incorrect.
 - **`setNom()`** met le nom en majuscules (`mb_strtoupper`), et **`setEmail()`** met l'e-mail en minuscules. Le préfixe `mb_` indique des fonctions qui gèrent correctement les accents.
 - **`ouvrirCompteMenuesDepenses($numero)`** : une méthode qui décrit une action métier plutôt que deux setters séparés. Elle coche l'option et enregistre le numéro de compte en une fois.
@@ -578,10 +474,29 @@ class UtilisateurRepository extends ServiceEntityRepository
     {
         parent::__construct($registry, Utilisateur::class);
     }
+
+    /** @return Utilisateur[] */
+    public function findResponsables(): array
+    {
+        return $this->createQueryBuilder('u')
+            ->where('u.actif = true')
+            ->andWhere('u.role != :demandeur')
+            ->setParameter('demandeur', 'ROLE_DEMANDEUR')
+            ->orderBy('u.nom', 'ASC')
+            ->getQuery()
+            ->getResult();
+    }
+
+    public function prochainNumeroCompteMd(): string
+    {
+        $nombre = $this->count(['compteMenuesDepenses' => true]);
+
+        return sprintf('CMD-%s-%03d', date('Y'), $nombre + 1);
+    }
 }
 ```
 
-Les trois repositories (Departement, Service, Utilisateur) sont identiques à celui-ci. En héritant de `ServiceEntityRepository`, ils reçoivent automatiquement des méthodes de recherche toutes prêtes :
+Les repositories (Departement, Utilisateur, puis SignatureReference à l'étape 3) partent tous de ce modèle. En héritant de `ServiceEntityRepository`, ils reçoivent automatiquement des méthodes de recherche toutes prêtes :
 
 | Méthode | SQL équivalent |
 |---|---|
@@ -644,6 +559,8 @@ final class Version20261123010100 extends AbstractMigration
 }
 ```
 
+Cette première migration crée encore la table `service` et la colonne `matricule`, supprimées ensuite par une autre migration (voir `04-changement-departement-explique.md`). On la garde telle quelle : **une migration déjà exécutée ne se modifie jamais**, on en ajoute une nouvelle.
+
 On y lit du **SQL classique** :
 
 - `CREATE TABLE departement (id INT AUTO_INCREMENT NOT NULL, nom VARCHAR(100) NOT NULL, UNIQUE INDEX ... (nom), PRIMARY KEY (id))` : la table des départements, avec un nom unique.
@@ -671,7 +588,6 @@ Doctrine note dans une table `doctrine_migration_versions` les migrations déjà
 namespace App\DataFixtures;
 
 use App\Entity\Departement;
-use App\Entity\Service;
 use App\Entity\Utilisateur;
 use Doctrine\Bundle\FixturesBundle\Fixture;
 use Doctrine\Persistence\ObjectManager;
@@ -680,35 +596,28 @@ use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
 class AppFixtures extends Fixture
 {
     private const DEPARTEMENTS = [
-        'ADMINISTRATION & LOGISTIQUE' => [
-            'DIRECTION_ADMIN' => 'Direction administrative',
-            'FACILITIES' => 'Facilities',
-            'ACHATS_MG' => 'Achats & moyens généraux',
-        ],
-        'FINANCE & COMPTABILITÉ' => [
-            'FINANCE' => 'Finance',
-            'COMPTABILITE' => 'Comptabilité',
-        ],
-        'DIRECTION GÉNÉRALE' => ['DIRECTION_GENERALE' => 'Direction générale'],
-        'RESSOURCES HUMAINES' => ['RH' => 'Ressources humaines'],
-        "SYSTÈMES D'INFORMATION" => ['INFORMATIQUE' => 'Informatique'],
-        'COMMERCIAL' => ['COMMERCIAL' => 'Commercial'],
+        'ADMINISTRATION & LOGISTIQUE',
+        'FINANCE & COMPTABILITÉ',
+        'DIRECTION GÉNÉRALE',
+        'RESSOURCES HUMAINES',
+        "SYSTÈMES D'INFORMATION",
+        'COMMERCIAL',
     ];
 
     private const UTILISATEURS = [
-        ['mireille.gbagbo', 'Mireille', 'Gbagbo', 'Directrice administrative', 'DIRECTION_ADMIN', 'ROLE_ADMIN', null, null],
-        ['regis.kouame', 'Régis', 'Kouamé', 'Directeur Financier et Comptable', 'FINANCE', 'ROLE_CFO', null, null],
-        ['mariam.bamba', 'Mariam Yenita', 'Bamba', 'Directrice Générale', 'DIRECTION_GENERALE', 'ROLE_DG', null, null],
-        ['aminata.kone', 'Aminata', 'Koné', 'Responsable Ressources Humaines', 'RH', 'ROLE_MANAGER', null, null],
-        ['yves.brou', 'Yves', 'Brou', 'Responsable Informatique', 'INFORMATIQUE', 'ROLE_MANAGER', null, null],
+        ['mireille.gbagbo', 'Mireille', 'Gbagbo', 'Directrice administrative', 'ADMINISTRATION & LOGISTIQUE', 'ROLE_ADMIN', null, null],
+        ['regis.kouame', 'Régis', 'Kouamé', 'Directeur Financier et Comptable', 'FINANCE & COMPTABILITÉ', 'ROLE_CFO', null, null],
+        ['mariam.bamba', 'Mariam Yenita', 'Bamba', 'Directrice Générale', 'DIRECTION GÉNÉRALE', 'ROLE_DG', null, null],
+        ['aminata.kone', 'Aminata', 'Koné', 'Responsable Ressources Humaines', 'RESSOURCES HUMAINES', 'ROLE_MANAGER', null, null],
+        ['yves.brou', 'Yves', 'Brou', 'Responsable Informatique', "SYSTÈMES D'INFORMATION", 'ROLE_MANAGER', null, null],
         ['nadia.cisse', 'Nadia', 'Cissé', 'Directrice Commerciale', 'COMMERCIAL', 'ROLE_MANAGER', null, null],
-        ['serge.kouadio', 'Serge', 'Kouadio', 'Responsable Facilities', 'FACILITIES', 'ROLE_MANAGER', 'mireille.gbagbo', 'CMD-2026-003'],
-        ['carine.toro', 'Carine', 'Toro', 'Responsable Achats et Moyens Généraux', 'ACHATS_MG', 'ROLE_RAF', 'mireille.gbagbo', null],
-        ['paul.yao', 'Paul', 'Yao', 'Comptable', 'COMPTABILITE', 'ROLE_COMPTA', 'regis.kouame', null],
-        ['fatou.diallo', 'Fatou', 'Diallo', 'Assistante Facilities', 'FACILITIES', 'ROLE_DEMANDEUR', 'serge.kouadio', 'CMD-2026-001'],
-        ['awa.ndiaye', 'Awa', 'Ndiaye', 'Technicienne maintenance', 'FACILITIES', 'ROLE_DEMANDEUR', 'serge.kouadio', null],
-        ['ibrahim.toure', 'Ibrahim', 'Touré', 'Chef de la sécurité', 'FACILITIES', 'ROLE_DEMANDEUR', 'serge.kouadio', 'CMD-2026-002'],
-        ['koffi.nguessan', 'Koffi', "N'Guessan", 'Agent logistique (achats)', 'FACILITIES', 'ROLE_DEMANDEUR', 'serge.kouadio', null],
+        ['serge.kouadio', 'Serge', 'Kouadio', 'Responsable Facilities', 'ADMINISTRATION & LOGISTIQUE', 'ROLE_MANAGER', 'mireille.gbagbo', 'CMD-2026-003'],
+        ['carine.toro', 'Carine', 'Toro', 'Responsable Achats et Moyens Généraux', 'ADMINISTRATION & LOGISTIQUE', 'ROLE_RAF', 'mireille.gbagbo', null],
+        ['paul.yao', 'Paul', 'Yao', 'Comptable', 'FINANCE & COMPTABILITÉ', 'ROLE_COMPTA', 'regis.kouame', null],
+        ['fatou.diallo', 'Fatou', 'Diallo', 'Assistante Facilities', 'ADMINISTRATION & LOGISTIQUE', 'ROLE_DEMANDEUR', 'serge.kouadio', 'CMD-2026-001'],
+        ['awa.ndiaye', 'Awa', 'Ndiaye', 'Technicienne maintenance', 'ADMINISTRATION & LOGISTIQUE', 'ROLE_DEMANDEUR', 'serge.kouadio', null],
+        ['ibrahim.toure', 'Ibrahim', 'Touré', 'Chef de la sécurité', 'ADMINISTRATION & LOGISTIQUE', 'ROLE_DEMANDEUR', 'serge.kouadio', 'CMD-2026-002'],
+        ['koffi.nguessan', 'Koffi', "N'Guessan", 'Agent logistique (achats)', 'ADMINISTRATION & LOGISTIQUE', 'ROLE_DEMANDEUR', 'serge.kouadio', null],
         ['eric.konan', 'Éric', 'Konan', 'Chargé de clientèle', 'COMMERCIAL', 'ROLE_DEMANDEUR', 'nadia.cisse', null],
     ];
 
@@ -718,26 +627,21 @@ class AppFixtures extends Fixture
 
     public function load(ObjectManager $manager): void
     {
-        $services = [];
-        foreach (self::DEPARTEMENTS as $nomDepartement => $listeServices) {
-            $departement = new Departement($nomDepartement);
-            $manager->persist($departement);
-            foreach ($listeServices as $code => $libelle) {
-                $services[$code] = new Service($code, $libelle, $departement);
-                $manager->persist($services[$code]);
-            }
+        $departements = [];
+        foreach (self::DEPARTEMENTS as $nom) {
+            $departements[$nom] = new Departement($nom);
+            $manager->persist($departements[$nom]);
         }
 
         $utilisateurs = [];
-        foreach (self::UTILISATEURS as $numero => [$identifiant, $prenom, $nom, $fonction, $codeService, $role, $n1, $compteMd]) {
+        foreach (self::UTILISATEURS as [$identifiant, $prenom, $nom, $fonction, $departement, $role, $n1, $compteMd]) {
             $utilisateur = new Utilisateur();
             $utilisateur
-                ->setMatricule(sprintf('CF-%04d', $numero + 1))
                 ->setPrenom($prenom)
                 ->setNom($nom)
                 ->setEmail($identifiant.'@cofina-demo.com')
                 ->setFonction($fonction)
-                ->setService($services[$codeService])
+                ->setDepartement($departements[$departement])
                 ->setRole($role)
                 ->setN1($n1 ? $utilisateurs[$n1] : null)
                 ->setMotDePasse($this->hasher->hashPassword($utilisateur, 'demo2026'));
@@ -757,8 +661,8 @@ class AppFixtures extends Fixture
 - `public function __construct(private UserPasswordHasherInterface $hasher)` : c'est l'**injection de dépendances**. On déclare dans le constructeur l'outil dont on a besoin (le chiffreur de mots de passe), et Symfony le fournit tout seul. Le mot-clé `private` dans le constructeur crée directement la propriété `$this->hasher`.
 - `$manager->persist($objet)` dit à Doctrine : « cet objet devra être enregistré ». Rien n'est encore écrit dans la base.
 - `$manager->flush()`, à la fin, écrit tout d'un coup : Doctrine génère et exécute tous les `INSERT INTO ...`.
-- `foreach (... as $numero => [$identifiant, $prenom, ...])` : la **déstructuration**. Chaque ligne du tableau est découpée en variables nommées.
-- `sprintf('CF-%04d', $numero + 1)` fabrique les matricules `CF-0001`, `CF-0002`… Le `%04d` signifie « un nombre sur 4 chiffres, complété par des zéros ».
+- `foreach (... as [$identifiant, $prenom, ...])` : la **déstructuration**. Chaque ligne du tableau est découpée en variables nommées.
+- `$departements[$departement]` : les départements sont d'abord créés et rangés dans un tableau, par nom. On les retrouve ensuite par leur nom pour les rattacher aux utilisateurs.
 - L'ordre des utilisateurs compte : un N+1 doit être créé **avant** ses collaborateurs. Ainsi, `$utilisateurs[$n1]` existe déjà quand on le rattache.
 - `hashPassword($utilisateur, 'demo2026')` chiffre le mot de passe. La base ne contient qu'un texte illisible du type `$2y$13$...` : même avec un accès à la base, on ne peut pas retrouver le mot de passe.
 
@@ -809,7 +713,7 @@ security:
 namespace App\Controller;
 
 use App\Repository\DepartementRepository;
-use App\Repository\ServiceRepository;
+use App\Repository\SignatureReferenceRepository;
 use App\Repository\UtilisateurRepository;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\Response;
@@ -821,12 +725,12 @@ class AccueilController extends AbstractController
     public function index(
         UtilisateurRepository $utilisateurs,
         DepartementRepository $departements,
-        ServiceRepository $services,
+        SignatureReferenceRepository $signatures,
     ): Response {
         return $this->render('accueil/index.html.twig', [
             'nbUtilisateurs' => $utilisateurs->count(['actif' => true]),
             'nbDepartements' => $departements->count([]),
-            'nbServices' => $services->count([]),
+            'nbSignatures' => $signatures->count([]),
             'nbComptesMd' => $utilisateurs->count(['compteMenuesDepenses' => true]),
         ]);
     }
@@ -889,6 +793,7 @@ Twig **échappe automatiquement** ce qu'il affiche : un nom contenant `<script>`
     <link rel="icon" href="{{ asset('images/logo-finelle.png') }}">
     <link rel="stylesheet" href="{{ asset('css/app.css') }}">
     <script src="{{ asset('js/app.js') }}" defer></script>
+    {% block javascripts %}{% endblock %}
 </head>
 <body>
 <div class="app">
@@ -897,9 +802,23 @@ Twig **échappe automatiquement** ce qu'il affiche : un nom contenant `<script>`
         <nav class="nav">
             <span class="nav-label">Dépenses</span>
             <a href="{{ path('accueil') }}" class="nav-item {{ app.current_route == 'accueil' ? 'active' }}">Tableau de bord</a>
-            <span class="nav-label">Administration</span>
-            <a href="{{ path('utilisateurs') }}" class="nav-item {{ app.current_route == 'utilisateurs' ? 'active' }}">Utilisateurs</a>
+            <span class="nav-label">Mon compte</span>
+            <a href="{{ path('signature') }}" class="nav-item {{ app.current_route == 'signature' ? 'active' }}">Ma signature</a>
+            {% if is_granted('ROLE_ADMIN') %}
+                <span class="nav-label">Administration</span>
+                <a href="{{ path('utilisateurs') }}" class="nav-item {{ app.current_route == 'utilisateurs' ? 'active' }}">Utilisateurs</a>
+            {% endif %}
         </nav>
+        <div class="sidebar-foot">
+            <div class="user-chip">
+                <span class="avatar">{{ app.user.initiales }}</span>
+                <div class="meta">
+                    <b>{{ app.user.nomComplet }}</b>
+                    <span>{{ app.user.roleLibelle }} · {{ app.user.departement }}</span>
+                </div>
+                <a href="{{ path('deconnexion') }}" class="lien-deconnexion" title="Se déconnecter">Quitter</a>
+            </div>
+        </div>
     </aside>
 
     <div class="main">
@@ -955,8 +874,8 @@ Twig **échappe automatiquement** ce qu'il affiche : un nom contenant `<script>`
             <span class="kpi-val">{{ nbDepartements }}</span>
         </div>
         <div class="card kpi">
-            <span class="kpi-top">Services</span>
-            <span class="kpi-val">{{ nbServices }}</span>
+            <span class="kpi-top">Signatures enregistrées</span>
+            <span class="kpi-val">{{ nbSignatures }}</span>
         </div>
         <div class="card kpi">
             <span class="kpi-top">Comptes menues dépenses</span>
@@ -983,7 +902,7 @@ Twig **échappe automatiquement** ce qu'il affiche : un nom contenant `<script>`
             <h1>Utilisateurs</h1>
             <p class="muted">Chaque utilisateur appartient à un département. Son N+1, qui signe ses FED, appartient au même département.</p>
         </div>
-        <input type="search" class="input recherche" placeholder="Rechercher un nom, un service…" data-filtre-tableau="#tableUtilisateurs">
+        <input type="search" class="input recherche" placeholder="Rechercher un nom, un département…" data-filtre-tableau="#tableUtilisateurs">
     </div>
 
     <div class="table-wrap">
@@ -992,7 +911,7 @@ Twig **échappe automatiquement** ce qu'il affiche : un nom contenant `<script>`
             <tr>
                 <th>Utilisateur</th>
                 <th>Fonction</th>
-                <th>Département · service</th>
+                <th>Département</th>
                 <th>Rôle</th>
                 <th>N+1</th>
                 <th>Menues dépenses</th>
@@ -1009,7 +928,7 @@ Twig **échappe automatiquement** ce qu'il affiche : un nom contenant `<script>`
                         </div>
                     </td>
                     <td>{{ u.fonction }}</td>
-                    <td><b>{{ u.departement }}</b><div class="muted petit">{{ u.service }}</div></td>
+                    <td>{{ u.departement }}</td>
                     <td>{{ u.roleLibelle }}</td>
                     <td>
                         {% if u.n1 %}
@@ -1145,6 +1064,61 @@ tbody tr:hover td { background: #FCFCFD; }
 .alert-success { background: var(--success-soft); border-color: #BFE3CD; color: var(--success); }
 .alert-error { background: var(--danger-soft); border-color: #F5C2C2; color: var(--danger); }
 .alert.disparait { opacity: 0; }
+
+/* Barre latérale : personne connectée */
+.sidebar-foot { margin-top: auto; }
+.user-chip { display: flex; align-items: center; gap: 10px; padding: 10px; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); }
+.user-chip .meta { min-width: 0; flex: 1; }
+.user-chip .meta b, .user-chip .meta span { display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.user-chip .meta span { font-size: 12px; color: var(--text-muted); }
+.lien-deconnexion { font-size: 12px; font-weight: 600; }
+
+/* Pages simples : connexion, création de compte, signature */
+.page-simple { display: grid; place-items: center; min-height: 100%; padding: 32px 16px; background: radial-gradient(1200px 600px at 100% 0, var(--accent-soft), transparent 60%), var(--bg); }
+.carte-simple { width: 100%; max-width: 440px; padding: 32px; display: grid; gap: 16px; background: var(--bg); border: 1px solid var(--border); border-radius: 16px; box-shadow: var(--shadow-hover); }
+.carte-simple.carte-large { max-width: 880px; }
+.carte-simple p { margin: 0; }
+.logo-grand { height: 58px; }
+.bas-de-carte { text-align: center; color: var(--text-muted); }
+
+/* Formulaires */
+.formulaire { display: grid; gap: 14px; }
+.champ { display: grid; gap: 6px; align-content: start; }
+.champ label { font-size: 13px; font-weight: 600; }
+.grille-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 14px 16px; }
+.pleine-largeur { grid-column: 1 / -1; }
+.partie { margin-top: 6px; padding-bottom: 6px; font-size: 12px; text-transform: uppercase; letter-spacing: .06em; color: var(--text-muted); border-bottom: 1px solid var(--border); }
+.erreur { font-size: 12.5px; color: var(--danger); }
+.aide { font-size: 12px; color: var(--text-muted); }
+.option { display: flex; gap: 12px; padding: 14px; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); cursor: pointer; }
+.option input { accent-color: var(--accent); width: 18px; height: 18px; }
+.btn-large { justify-content: center; padding: 12px 16px; }
+.btn:disabled { opacity: .5; cursor: not-allowed; transform: none; }
+select.input:disabled { background: var(--surface); }
+
+/* Enregistrement de la signature */
+.etapes { display: flex; gap: 8px; margin: 0; padding: 0; list-style: none; counter-reset: etape; }
+.etapes li { flex: 1; padding: 8px 12px; text-align: center; font-size: 13px; color: var(--text-muted); background: var(--surface); border: 1px solid var(--border); border-radius: 999px; }
+.etapes li.en-cours { color: var(--accent); font-weight: 600; background: var(--accent-soft); border-color: var(--accent); }
+.etapes li.fait { color: var(--success); background: var(--success-soft); border-color: #BFE3CD; }
+.consignes { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
+.carte-consigne { display: grid; gap: 2px; padding: 12px 14px; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); }
+.carte-consigne span { font-size: 12.5px; color: var(--text-muted); }
+.zone-essai { display: grid; grid-template-columns: 1fr 180px; gap: 20px; align-items: start; }
+.zone-essai h2 { margin-bottom: 10px; }
+.pad { display: block; width: 100%; height: 220px; background: var(--bg); border: 1.5px dashed var(--accent); border-radius: var(--radius-sm); cursor: crosshair; touch-action: none; }
+.sous-pad { display: flex; justify-content: space-between; align-items: center; margin-top: 8px; }
+.vignettes { display: grid; gap: 10px; }
+.vignettes h3 { font-size: 12.5px; }
+.vignette { display: grid; gap: 4px; min-height: 70px; padding: 8px; text-align: left; font: inherit; font-size: 12px; color: var(--text-muted); background: var(--bg); border: 1px solid var(--border); border-radius: var(--radius-sm); cursor: pointer; transition: border-color var(--t); }
+.vignette:hover:not(:disabled) { border-color: var(--accent); }
+.vignette:disabled { cursor: default; }
+.vignette.en-cours { color: var(--accent); border: 1px dashed var(--accent); }
+.vignette img { max-width: 100%; max-height: 44px; }
+.actions { display: flex; justify-content: space-between; align-items: center; gap: 12px; }
+.signature-carte { display: grid; gap: 12px; max-width: 520px; }
+.signature-image { display: grid; place-items: center; height: 160px; background: var(--bg); border: 1px solid var(--border); border-radius: var(--radius-sm); }
+.signature-image img { max-height: 140px; max-width: 100%; }
 ```
 
 - **Les variables** (`--accent`, `--surface`…) dans `:root` regroupent les couleurs de la charte. Elles sont reprises de la maquette. Pour changer le rouge Fin'Elle partout, il suffit de modifier une seule ligne. On les utilise avec `var(--accent)`.

@@ -1,6 +1,6 @@
 document.addEventListener('DOMContentLoaded', () => {
     const departement = document.querySelector('[data-filtre-departement]');
-    const listes = [document.querySelector('#service'), document.querySelector('#n1')];
+    const listes = [document.querySelector('#n1')];
     const optionsParListe = new Map(listes.map((liste) => [liste, [...liste.querySelectorAll('option[data-departement]')]]));
 
     const filtrer = () => {

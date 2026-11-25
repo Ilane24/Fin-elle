@@ -4,7 +4,6 @@ namespace App\Controller;
 
 use App\Entity\Utilisateur;
 use App\Repository\DepartementRepository;
-use App\Repository\ServiceRepository;
 use App\Repository\UtilisateurRepository;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
@@ -21,7 +20,6 @@ class InscriptionController extends AbstractController
     public function inscription(
         Request $request,
         DepartementRepository $departements,
-        ServiceRepository $services,
         UtilisateurRepository $utilisateurs,
         UserPasswordHasherInterface $hasher,
         EntityManagerInterface $em,
@@ -33,7 +31,7 @@ class InscriptionController extends AbstractController
 
         if ($request->isMethod('POST')) {
             $champ = fn (string $nom): string => trim((string) ($saisie[$nom] ?? ''));
-            $service = $services->find((int) $champ('service'));
+            $departement = $departements->find((int) $champ('departement'));
             $n1 = $utilisateurs->find((int) $champ('n1'));
             $email = mb_strtolower($champ('email'));
 
@@ -46,11 +44,6 @@ class InscriptionController extends AbstractController
             if ($champ('prenom') === '') {
                 $erreurs['prenom'] = 'Saisissez votre prénom.';
             }
-            if ($champ('matricule') === '') {
-                $erreurs['matricule'] = 'Saisissez votre matricule.';
-            } elseif ($utilisateurs->findOneBy(['matricule' => $champ('matricule')])) {
-                $erreurs['matricule'] = 'Ce matricule est déjà utilisé.';
-            }
             if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
                 $erreurs['email'] = 'Saisissez une adresse e-mail valide.';
             } elseif (!str_ends_with($email, '@'.$domaine)) {
@@ -61,10 +54,10 @@ class InscriptionController extends AbstractController
             if ($champ('fonction') === '') {
                 $erreurs['fonction'] = 'Saisissez votre fonction.';
             }
-            if (!$service || $service->getDepartement()?->getId() !== (int) $champ('departement')) {
-                $erreurs['service'] = 'Choisissez un service de votre département.';
+            if (!$departement) {
+                $erreurs['departement'] = 'Choisissez votre département.';
             }
-            if (!$n1 || !$service || $n1->getDepartement() !== $service->getDepartement() || $n1->getRole() === 'ROLE_DEMANDEUR') {
+            if (!$n1 || !$departement || $n1->getDepartement() !== $departement || $n1->getRole() === 'ROLE_DEMANDEUR') {
                 $erreurs['n1'] = 'Choisissez un N+1 de votre département.';
             }
             if (!preg_match('/^(?=.*\d).{8,}$/', $champ('motDePasse'))) {
@@ -78,11 +71,10 @@ class InscriptionController extends AbstractController
                 $utilisateur
                     ->setNom($champ('nom'))
                     ->setPrenom($champ('prenom'))
-                    ->setMatricule($champ('matricule'))
                     ->setTelephone($champ('telephone') ?: null)
                     ->setEmail($email)
                     ->setFonction($champ('fonction'))
-                    ->setService($service)
+                    ->setDepartement($departement)
                     ->setN1($n1)
                     ->setMotDePasse($hasher->hashPassword($utilisateur, $champ('motDePasse')));
                 if (isset($saisie['compteMenuesDepenses'])) {

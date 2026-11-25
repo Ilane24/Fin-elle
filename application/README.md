@@ -11,6 +11,7 @@ La maquette d'origine se trouve dans le dossier `../maquette` et n'est pas modif
 | `docs/01-installation-sur-mac-avec-mamp.md` | Installer et lancer le site sur un Mac avec MAMP, pas à pas |
 | `docs/02-etapes-1-et-2-expliquees.md` | Étapes 1 et 2 : base du projet et base de données, code et explications |
 | `docs/03-etape-3-expliquee.md` | Étape 3 : connexion, création de compte et signature, code et explications |
+| `docs/04-changement-departement-explique.md` | Changement : le département remplace le service, le matricule disparaît |
 
 ## Démarrage rapide
 

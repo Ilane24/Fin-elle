@@ -34,18 +34,13 @@
                 {{ f.erreur(erreurs, 'prenom') }}
             </div>
             <div class="champ">
-                <label for="matricule">Matricule *</label>
-                <input class="input" id="matricule" name="matricule" value="{{ saisie.matricule ?? '' }}" placeholder="Ex. CF-01234">
-                {{ f.erreur(erreurs, 'matricule') }}
+                <label for="email">E-mail professionnel *</label>
+                <input class="input" type="email" id="email" name="email" value="{{ saisie.email ?? '' }}" placeholder="prenom.nom@{{ domaine }}">
+                {{ f.erreur(erreurs, 'email') }}
             </div>
             <div class="champ">
                 <label for="telephone">Téléphone</label>
                 <input class="input" id="telephone" name="telephone" value="{{ saisie.telephone ?? '' }}" placeholder="+225 00 00 00 00 00">
-            </div>
-            <div class="champ pleine-largeur">
-                <label for="email">E-mail professionnel *</label>
-                <input class="input" type="email" id="email" name="email" value="{{ saisie.email ?? '' }}" placeholder="prenom.nom@{{ domaine }}">
-                {{ f.erreur(erreurs, 'email') }}
             </div>
         </div>
 
@@ -64,20 +59,9 @@
                         <option value="{{ d.id }}" {{ (saisie.departement ?? '') == d.id ? 'selected' }}>{{ d.nom }}</option>
                     {% endfor %}
                 </select>
+                {{ f.erreur(erreurs, 'departement') }}
             </div>
-            <div class="champ">
-                <label for="service">Service *</label>
-                <select class="input" id="service" name="service">
-                    <option value="">Choisissez d'abord le département</option>
-                    {% for d in departements %}
-                        {% for s in d.services %}
-                            <option value="{{ s.id }}" data-departement="{{ d.id }}" {{ (saisie.service ?? '') == s.id ? 'selected' }}>{{ s.libelle }}</option>
-                        {% endfor %}
-                    {% endfor %}
-                </select>
-                {{ f.erreur(erreurs, 'service') }}
-            </div>
-            <div class="champ">
+            <div class="champ pleine-largeur">
                 <label for="n1">Supérieur hiérarchique (N+1) *</label>
                 <select class="input" id="n1" name="n1">
                     <option value="">Choisissez d'abord le département</option>

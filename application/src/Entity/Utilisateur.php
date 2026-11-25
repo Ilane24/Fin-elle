@@ -26,9 +26,6 @@ class Utilisateur implements UserInterface, PasswordAuthenticatedUserInterface
     #[ORM\Column]
     private ?int $id = null;
 
-    #[ORM\Column(length: 20, unique: true)]
-    private string $matricule = '';
-
     #[ORM\Column(length: 100)]
     private string $nom = '';
 
@@ -52,7 +49,7 @@ class Utilisateur implements UserInterface, PasswordAuthenticatedUserInterface
 
     #[ORM\ManyToOne]
     #[ORM\JoinColumn(nullable: false)]
-    private ?Service $service = null;
+    private ?Departement $departement = null;
 
     #[ORM\ManyToOne]
     #[ORM\JoinColumn(onDelete: 'SET NULL')]
@@ -81,18 +78,6 @@ class Utilisateur implements UserInterface, PasswordAuthenticatedUserInterface
     public function getId(): ?int
     {
         return $this->id;
-    }
-
-    public function getMatricule(): string
-    {
-        return $this->matricule;
-    }
-
-    public function setMatricule(string $matricule): static
-    {
-        $this->matricule = $matricule;
-
-        return $this;
     }
 
     public function getNom(): string
@@ -208,21 +193,16 @@ class Utilisateur implements UserInterface, PasswordAuthenticatedUserInterface
     {
     }
 
-    public function getService(): ?Service
-    {
-        return $this->service;
-    }
-
-    public function setService(Service $service): static
-    {
-        $this->service = $service;
-
-        return $this;
-    }
-
     public function getDepartement(): ?Departement
     {
-        return $this->service?->getDepartement();
+        return $this->departement;
+    }
+
+    public function setDepartement(Departement $departement): static
+    {
+        $this->departement = $departement;
+
+        return $this;
     }
 
     public function getN1(): ?Utilisateur

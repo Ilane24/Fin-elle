@@ -6,7 +6,7 @@ Ce document reprend **tout le code ajouté à l'étape 3**, avec ses explication
 
 - Toutes les pages sont réservées aux personnes connectées. La page Utilisateurs est réservée à l'administrateur.
 - On se connecte avec son e-mail professionnel et son mot de passe. Un compte désactivé est refusé.
-- La création de compte demande le département. Le département filtre les services et les N+1 proposés, et le serveur revérifie que le N+1 appartient bien au même département. L'option « compte menues dépenses » reçoit son numéro automatiquement.
+- La création de compte demande le département. Le département filtre les N+1 proposés, et le serveur revérifie que le N+1 appartient bien au même département. L'option « compte menues dépenses » reçoit son numéro automatiquement.
 - Tant que la signature n'est pas enregistrée, toutes les pages renvoient vers l'enregistrement de la signature.
 - La signature se fait en trois essais, pas à pas. Le serveur garde l'essai qui ressemble le plus aux deux autres, puis le stocke **chiffré** et lié au compte.
 
@@ -280,7 +280,6 @@ namespace App\Controller;
 
 use App\Entity\Utilisateur;
 use App\Repository\DepartementRepository;
-use App\Repository\ServiceRepository;
 use App\Repository\UtilisateurRepository;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
@@ -297,7 +296,6 @@ class InscriptionController extends AbstractController
     public function inscription(
         Request $request,
         DepartementRepository $departements,
-        ServiceRepository $services,
         UtilisateurRepository $utilisateurs,
         UserPasswordHasherInterface $hasher,
         EntityManagerInterface $em,
@@ -309,7 +307,7 @@ class InscriptionController extends AbstractController
 
         if ($request->isMethod('POST')) {
             $champ = fn (string $nom): string => trim((string) ($saisie[$nom] ?? ''));
-            $service = $services->find((int) $champ('service'));
+            $departement = $departements->find((int) $champ('departement'));
             $n1 = $utilisateurs->find((int) $champ('n1'));
             $email = mb_strtolower($champ('email'));
 
@@ -322,11 +320,6 @@ class InscriptionController extends AbstractController
             if ($champ('prenom') === '') {
                 $erreurs['prenom'] = 'Saisissez votre prénom.';
             }
-            if ($champ('matricule') === '') {
-                $erreurs['matricule'] = 'Saisissez votre matricule.';
-            } elseif ($utilisateurs->findOneBy(['matricule' => $champ('matricule')])) {
-                $erreurs['matricule'] = 'Ce matricule est déjà utilisé.';
-            }
             if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
                 $erreurs['email'] = 'Saisissez une adresse e-mail valide.';
             } elseif (!str_ends_with($email, '@'.$domaine)) {
@@ -337,10 +330,10 @@ class InscriptionController extends AbstractController
             if ($champ('fonction') === '') {
                 $erreurs['fonction'] = 'Saisissez votre fonction.';
             }
-            if (!$service || $service->getDepartement()?->getId() !== (int) $champ('departement')) {
-                $erreurs['service'] = 'Choisissez un service de votre département.';
+            if (!$departement) {
+                $erreurs['departement'] = 'Choisissez votre département.';
             }
-            if (!$n1 || !$service || $n1->getDepartement() !== $service->getDepartement() || $n1->getRole() === 'ROLE_DEMANDEUR') {
+            if (!$n1 || !$departement || $n1->getDepartement() !== $departement || $n1->getRole() === 'ROLE_DEMANDEUR') {
                 $erreurs['n1'] = 'Choisissez un N+1 de votre département.';
             }
             if (!preg_match('/^(?=.*\d).{8,}$/', $champ('motDePasse'))) {
@@ -354,11 +347,10 @@ class InscriptionController extends AbstractController
                 $utilisateur
                     ->setNom($champ('nom'))
                     ->setPrenom($champ('prenom'))
-                    ->setMatricule($champ('matricule'))
                     ->setTelephone($champ('telephone') ?: null)
                     ->setEmail($email)
                     ->setFonction($champ('fonction'))
-                    ->setService($service)
+                    ->setDepartement($departement)
                     ->setN1($n1)
                     ->setMotDePasse($hasher->hashPassword($utilisateur, $champ('motDePasse')));
                 if (isset($saisie['compteMenuesDepenses'])) {
@@ -388,7 +380,7 @@ class InscriptionController extends AbstractController
 
 Ce contrôleur fait trois choses, dans l'ordre :
 
-1. **Afficher le formulaire** (arrivée sur la page, méthode GET). On envoie au gabarit les départements avec leurs services, et la liste des responsables.
+1. **Afficher le formulaire** (arrivée sur la page, méthode GET). On envoie au gabarit les départements et la liste des responsables.
 2. **Contrôler la saisie** (envoi du formulaire, méthode POST). Chaque erreur est rangée dans le tableau `$erreurs`, sous le nom du champ concerné. Le gabarit l'affiche sous ce champ.
 3. **Créer le compte** s'il n'y a aucune erreur. Le compte est enregistré, la personne est connectée tout de suite, puis envoyée vers l'enregistrement de sa signature.
 
@@ -397,7 +389,7 @@ Les points importants :
 - `$request->request->all()` récupère tout ce que le formulaire a envoyé, sous forme de tableau. On le renvoie au gabarit (`saisie`) pour **pré-remplir les champs** en cas d'erreur : la personne n'a pas à tout retaper.
 - `$champ = fn (string $nom): string => trim(...)` est une **fonction fléchée** : une petite fonction rangée dans une variable. `$champ('nom')` renvoie la valeur du champ `nom`, nettoyée des espaces avant et après.
 - `#[Autowire('%env(APP_DOMAINE_EMAIL)%')] string $domaine` lit la variable `APP_DOMAINE_EMAIL` du fichier `.env` (`cofina-demo.com`). Le domaine autorisé n'est donc pas écrit en dur dans le code : on le changera dans `.env` pour le vrai domaine de l'entreprise.
-- **Le contrôle du N+1 est refait côté serveur** : il doit exister, appartenir au même département que le service choisi, et être un responsable (pas un simple demandeur). Le filtrage des listes en JavaScript ne sert qu'au confort : n'importe qui peut modifier une page dans son navigateur. **La règle de sécurité est toujours vérifiée par le serveur.**
+- **Le contrôle du N+1 est refait côté serveur** : il doit exister, appartenir au département choisi, et être un responsable (pas un simple demandeur). Le filtrage des listes en JavaScript ne sert qu'au confort : n'importe qui peut modifier une page dans son navigateur. **La règle de sécurité est toujours vérifiée par le serveur.**
 - `preg_match('/^(?=.*\d).{8,}$/', ...)` vérifie le mot de passe : au moins 8 caractères (`.{8,}`), dont au moins un chiffre (`(?=.*\d)`).
 - `$hasher->hashPassword(...)` chiffre le mot de passe avant de l'enregistrer.
 - `$utilisateurs->prochainNumeroCompteMd()` calcule le numéro du compte menues dépenses (voir ci-dessous).
@@ -494,18 +486,13 @@ class UtilisateurRepository extends ServiceEntityRepository
                 {{ f.erreur(erreurs, 'prenom') }}
             </div>
             <div class="champ">
-                <label for="matricule">Matricule *</label>
-                <input class="input" id="matricule" name="matricule" value="{{ saisie.matricule ?? '' }}" placeholder="Ex. CF-01234">
-                {{ f.erreur(erreurs, 'matricule') }}
+                <label for="email">E-mail professionnel *</label>
+                <input class="input" type="email" id="email" name="email" value="{{ saisie.email ?? '' }}" placeholder="prenom.nom@{{ domaine }}">
+                {{ f.erreur(erreurs, 'email') }}
             </div>
             <div class="champ">
                 <label for="telephone">Téléphone</label>
                 <input class="input" id="telephone" name="telephone" value="{{ saisie.telephone ?? '' }}" placeholder="+225 00 00 00 00 00">
-            </div>
-            <div class="champ pleine-largeur">
-                <label for="email">E-mail professionnel *</label>
-                <input class="input" type="email" id="email" name="email" value="{{ saisie.email ?? '' }}" placeholder="prenom.nom@{{ domaine }}">
-                {{ f.erreur(erreurs, 'email') }}
             </div>
         </div>
 
@@ -524,20 +511,9 @@ class UtilisateurRepository extends ServiceEntityRepository
                         <option value="{{ d.id }}" {{ (saisie.departement ?? '') == d.id ? 'selected' }}>{{ d.nom }}</option>
                     {% endfor %}
                 </select>
+                {{ f.erreur(erreurs, 'departement') }}
             </div>
-            <div class="champ">
-                <label for="service">Service *</label>
-                <select class="input" id="service" name="service">
-                    <option value="">Choisissez d'abord le département</option>
-                    {% for d in departements %}
-                        {% for s in d.services %}
-                            <option value="{{ s.id }}" data-departement="{{ d.id }}" {{ (saisie.service ?? '') == s.id ? 'selected' }}>{{ s.libelle }}</option>
-                        {% endfor %}
-                    {% endfor %}
-                </select>
-                {{ f.erreur(erreurs, 'service') }}
-            </div>
-            <div class="champ">
+            <div class="champ pleine-largeur">
                 <label for="n1">Supérieur hiérarchique (N+1) *</label>
                 <select class="input" id="n1" name="n1">
                     <option value="">Choisissez d'abord le département</option>
@@ -576,7 +552,7 @@ class UtilisateurRepository extends ServiceEntityRepository
 
 - **La macro `erreur`** est une petite fonction Twig réutilisable. `{{ f.erreur(erreurs, 'nom') }}` affiche le message d'erreur du champ `nom` s'il y en a un. On évite ainsi de répéter le même `{% if %}` sous chaque champ.
 - `value="{{ saisie.nom ?? '' }}"` remet la valeur saisie après une erreur. `??` signifie « si elle n'existe pas, alors chaîne vide ». Les mots de passe ne sont volontairement **jamais** remis.
-- **Les listes Service et N+1 contiennent toutes les options**, chacune marquée d'un attribut `data-departement`. C'est le JavaScript (section 6) qui n'affiche que celles du département choisi.
+- **La liste N+1 contient tous les responsables**, chacun marqué d'un attribut `data-departement`. C'est le JavaScript (section 6) qui n'affiche que ceux du département choisi.
 - `novalidate` sur le formulaire désactive les contrôles automatiques du navigateur, pour que tous les messages viennent du serveur, en français et au même endroit.
 
 ---
@@ -586,7 +562,7 @@ class UtilisateurRepository extends ServiceEntityRepository
 ```javascript
 document.addEventListener('DOMContentLoaded', () => {
     const departement = document.querySelector('[data-filtre-departement]');
-    const listes = [document.querySelector('#service'), document.querySelector('#n1')];
+    const listes = [document.querySelector('#n1')];
     const optionsParListe = new Map(listes.map((liste) => [liste, [...liste.querySelectorAll('option[data-departement]')]]));
 
     const filtrer = () => {
@@ -609,21 +585,23 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 ```
 
-**Ce qu'il fait** : quand on choisit un département, les listes « Service » et « N+1 » ne gardent que les choix de ce département.
+**Ce qu'il fait** : quand on choisit un département, la liste « N+1 » ne garde que les responsables de ce département.
+
+Le script travaille sur un tableau de listes (`listes`), qui ne contient aujourd'hui que la liste N+1. Pour filtrer une autre liste par département plus tard, il suffira de l'ajouter à ce tableau et de marquer ses options avec `data-departement`.
 
 **Comment** :
 
-1. Au chargement, il mémorise toutes les options des deux listes qui portent un `data-departement` (dans une `Map`, une sorte de tableau associatif : liste → ses options).
+1. Au chargement, il mémorise toutes les options de la liste qui portent un `data-departement` (dans une `Map`, une sorte de tableau associatif : liste → ses options).
 2. À chaque changement de département (`change`), la fonction `filtrer` :
    - retire toutes les options de la liste ;
    - remet seulement celles dont `data-departement` est égal au département choisi ;
    - garde la sélection si elle est toujours valable, sinon la vide ;
    - désactive la liste tant qu'aucun département n'est choisi, et change le premier texte (« Choisissez d'abord le département » / « Choisir… »).
-3. `filtrer()` est aussi appelée une première fois au chargement. Après une erreur, la page revient avec le département déjà choisi, et les listes sont tout de suite filtrées.
+3. `filtrer()` est aussi appelée une première fois au chargement. Après une erreur, la page revient avec le département déjà choisi, et la liste est tout de suite filtrée.
 
 **Pourquoi retirer les options plutôt que les cacher ?** Safari ne sait pas masquer une option de liste déroulante. En les retirant puis en les remettant, le script fonctionne dans tous les navigateurs.
 
-**Sans ce script**, les listes montreraient tous les services et tous les responsables. Le serveur refuserait quand même un mauvais choix (section 5).
+**Sans ce script**, la liste montrerait tous les responsables de l'entreprise. Le serveur refuserait quand même un mauvais choix (section 5).
 
 ---
 
@@ -1293,7 +1271,7 @@ class SignatureObligatoireSubscriber implements EventSubscriberInterface
                 <span class="avatar">{{ app.user.initiales }}</span>
                 <div class="meta">
                     <b>{{ app.user.nomComplet }}</b>
-                    <span>{{ app.user.roleLibelle }} · {{ app.user.service }}</span>
+                    <span>{{ app.user.roleLibelle }} · {{ app.user.departement }}</span>
                 </div>
                 <a href="{{ path('deconnexion') }}" class="lien-deconnexion" title="Se déconnecter">Quitter</a>
             </div>
@@ -1320,7 +1298,7 @@ class SignatureObligatoireSubscriber implements EventSubscriberInterface
 </html>
 ```
 
-- `app.user` est la personne connectée (un objet `Utilisateur`). On affiche ses initiales, son nom, son rôle et son service en bas de la barre latérale, avec le lien « Quitter » vers `/deconnexion`.
+- `app.user` est la personne connectée (un objet `Utilisateur`). On affiche ses initiales, son nom, son rôle et son département en bas de la barre latérale, avec le lien « Quitter » vers `/deconnexion`.
 - `{% if is_granted('ROLE_ADMIN') %}` n'affiche le menu Administration qu'à l'administrateur. Ce n'est qu'un confort d'affichage : la vraie protection est la règle `access_control` de `security.yaml`. Un non-administrateur qui tape l'adresse `/utilisateurs` reçoit une erreur 403 (accès refusé).
 - `{% block javascripts %}` permet à une page d'ajouter son propre script, comme `inscription.js` ou `signature.js`. Chaque page ne charge que ce dont elle a besoin.
 

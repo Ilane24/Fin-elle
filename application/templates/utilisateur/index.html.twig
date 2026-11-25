@@ -8,7 +8,7 @@
             <h1>Utilisateurs</h1>
             <p class="muted">Chaque utilisateur appartient à un département. Son N+1, qui signe ses FED, appartient au même département.</p>
         </div>
-        <input type="search" class="input recherche" placeholder="Rechercher un nom, un service…" data-filtre-tableau="#tableUtilisateurs">
+        <input type="search" class="input recherche" placeholder="Rechercher un nom, un département…" data-filtre-tableau="#tableUtilisateurs">
     </div>
 
     <div class="table-wrap">
@@ -17,7 +17,7 @@
             <tr>
                 <th>Utilisateur</th>
                 <th>Fonction</th>
-                <th>Département · service</th>
+                <th>Département</th>
                 <th>Rôle</th>
                 <th>N+1</th>
                 <th>Menues dépenses</th>
@@ -34,7 +34,7 @@
                         </div>
                     </td>
                     <td>{{ u.fonction }}</td>
-                    <td><b>{{ u.departement }}</b><div class="muted petit">{{ u.service }}</div></td>
+                    <td>{{ u.departement }}</td>
                     <td>{{ u.roleLibelle }}</td>
                     <td>
                         {% if u.n1 %}
